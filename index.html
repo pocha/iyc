@@ -1,1 +1,283 @@
-hello world
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creative Form Submission</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'bounce-slow': 'bounce 2s infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .glass-effect {
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .file-upload-area {
+            transition: all 0.3s ease;
+        }
+        
+        .file-upload-area:hover {
+            transform: scale(1.02);
+        }
+        
+        .file-upload-area.drag-over {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: #3b82f6;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="min-h-screen gradient-bg flex items-center justify-center p-4">
+    <!-- Floating Background Elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-1/4 left-1/4 w-64 h-64 bg-white opacity-5 rounded-full animate-float"></div>
+        <div class="absolute top-3/4 right-1/4 w-48 h-48 bg-white opacity-5 rounded-full animate-float" style="animation-delay: -2s;"></div>
+        <div class="absolute top-1/2 left-3/4 w-32 h-32 bg-white opacity-5 rounded-full animate-float" style="animation-delay: -4s;"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="relative z-10 w-full max-w-2xl">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-5xl font-bold text-white mb-4 animate-pulse-slow">
+                ✨ Creative Submission Portal ✨
+            </h1>
+            <p class="text-xl text-white opacity-90">
+                Share your amazing ideas with the world
+            </p>
+        </div>
+
+        <!-- Form Container -->
+        <div class="glass-effect rounded-3xl p-8 shadow-2xl">
+            <form id="submissionForm" class="space-y-6">
+                <!-- Title Field -->
+                <div class="group">
+                    <label for="title" class="block text-white text-lg font-semibold mb-2 group-hover:text-yellow-300 transition-colors">
+                        🎯 Project Title
+                    </label>
+                    <input 
+                        type="text" 
+                        id="title" 
+                        name="title" 
+                        required
+                        class="w-full px-6 py-4 bg-white bg-opacity-20 border-2 border-white border-opacity-30 rounded-2xl text-white placeholder-white placeholder-opacity-70 focus:outline-none focus:border-yellow-300 focus:bg-opacity-30 transition-all duration-300 text-lg"
+                        placeholder="Enter your amazing project title..."
+                    >
+                </div>
+
+                <!-- Description Field -->
+                <div class="group">
+                    <label for="description" class="block text-white text-lg font-semibold mb-2 group-hover:text-yellow-300 transition-colors">
+                        📝 Description
+                    </label>
+                    <textarea 
+                        id="description" 
+                        name="description" 
+                        required
+                        rows="4"
+                        class="w-full px-6 py-4 bg-white bg-opacity-20 border-2 border-white border-opacity-30 rounded-2xl text-white placeholder-white placeholder-opacity-70 focus:outline-none focus:border-yellow-300 focus:bg-opacity-30 transition-all duration-300 text-lg resize-none"
+                        placeholder="Describe your project in detail..."
+                    ></textarea>
+                </div>
+
+                <!-- File Upload Field -->
+                <div class="group">
+                    <label for="file" class="block text-white text-lg font-semibold mb-2 group-hover:text-yellow-300 transition-colors">
+                        📎 Upload File
+                    </label>
+                    <div class="file-upload-area bg-white bg-opacity-10 border-2 border-dashed border-white border-opacity-50 rounded-2xl p-8 text-center cursor-pointer hover:bg-opacity-20 transition-all duration-300">
+                        <input 
+                            type="file" 
+                            id="file" 
+                            name="file" 
+                            required
+                            class="hidden"
+                            accept="*/*"
+                        >
+                        <div id="fileUploadContent">
+                            <div class="text-6xl mb-4 animate-bounce-slow">📁</div>
+                            <p class="text-white text-xl font-semibold mb-2">Drop your file here or click to browse</p>
+                            <p class="text-white opacity-70">Any file type accepted</p>
+                        </div>
+                        <div id="fileSelectedContent" class="hidden">
+                            <div class="text-6xl mb-4">✅</div>
+                            <p class="text-white text-xl font-semibold mb-2">File Selected:</p>
+                            <p id="fileName" class="text-yellow-300 text-lg"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="pt-4">
+                    <button 
+                        type="submit" 
+                        id="submitBtn"
+                        class="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-4 px-8 rounded-2xl text-xl shadow-lg transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-purple-300"
+                    >
+                        <span id="submitText">🚀 Launch Submission</span>
+                        <span id="loadingText" class="hidden">⏳ Launching...</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Success Message -->
+            <div id="successMessage" class="hidden mt-6 p-6 bg-green-500 bg-opacity-20 border-2 border-green-400 rounded-2xl text-center">
+                <div class="text-4xl mb-2">🎉</div>
+                <p class="text-white text-xl font-semibold">Submission Successful!</p>
+                <p class="text-white opacity-90">Your project has been submitted successfully.</p>
+            </div>
+
+            <!-- Error Message -->
+            <div id="errorMessage" class="hidden mt-6 p-6 bg-red-500 bg-opacity-20 border-2 border-red-400 rounded-2xl text-center">
+                <div class="text-4xl mb-2">❌</div>
+                <p class="text-white text-xl font-semibold">Submission Failed</p>
+                <p id="errorText" class="text-white opacity-90">Please try again later.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Function URL - Replace with your actual Firebase function URL
+        const FIREBASE_FUNCTION_URL = 'https://your-region-your-project.cloudfunctions.net/submitForm';
+
+        // File upload handling
+        const fileInput = document.getElementById('file');
+        const fileUploadArea = document.querySelector('.file-upload-area');
+        const fileUploadContent = document.getElementById('fileUploadContent');
+        const fileSelectedContent = document.getElementById('fileSelectedContent');
+        const fileName = document.getElementById('fileName');
+
+        // Click to upload
+        fileUploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // File selection
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                fileName.textContent = file.name;
+                fileUploadContent.classList.add('hidden');
+                fileSelectedContent.classList.remove('hidden');
+            }
+        });
+
+        // Drag and drop functionality
+        fileUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.add('drag-over');
+        });
+
+        fileUploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('drag-over');
+        });
+
+        fileUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                const file = files[0];
+                fileName.textContent = file.name;
+                fileUploadContent.classList.add('hidden');
+                fileSelectedContent.classList.remove('hidden');
+            }
+        });
+
+        // Form submission
+        document.getElementById('submissionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const submitText = document.getElementById('submitText');
+            const loadingText = document.getElementById('loadingText');
+            const successMessage = document.getElementById('successMessage');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitText.classList.add('hidden');
+            loadingText.classList.remove('hidden');
+            successMessage.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+
+            try {
+                // Prepare form data
+                const formData = new FormData();
+                formData.append('title', document.getElementById('title').value);
+                formData.append('description', document.getElementById('description').value);
+                formData.append('file', document.getElementById('file').files[0]);
+
+                // Submit to Firebase function
+                const response = await fetch(FIREBASE_FUNCTION_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('Success:', result);
+                    
+                    // Show success message
+                    successMessage.classList.remove('hidden');
+                    
+                    // Reset form after delay
+                    setTimeout(() => {
+                        document.getElementById('submissionForm').reset();
+                        fileUploadContent.classList.remove('hidden');
+                        fileSelectedContent.classList.add('hidden');
+                        successMessage.classList.add('hidden');
+                    }, 3000);
+                } else {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                
+                // Show error message
+                document.getElementById('errorText').textContent = error.message;
+                errorMessage.classList.remove('hidden');
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                submitText.classList.remove('hidden');
+                loadingText.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
