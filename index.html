@@ -16,7 +16,7 @@ title: Whats up IYC
             <h3 class="text-lg font-semibold text-orange-600 hover:text-orange-800">
               <a href="{{ post.url | relative_url }}" class="hover:underline">{{ post.title }}</a>
             </h3>
-            <p class="text-gray-600 mt-1">{{ post.excerpt | strip_html | truncate: 100 }}</p>
+            <!--<p class="text-gray-600 mt-1">{{ post.excerpt | strip_html | truncate: 100 }}</p>-->
             <div class="flex items-center mt-2 text-sm text-gray-500">
               <span class="flex items-center mr-4">
                 <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -38,6 +38,7 @@ title: Whats up IYC
                 </svg>
                 {{ post.date | date: "%B %d, %Y" }}
               </span>
+              <!--
               <span class="flex items-center">
                 <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                   <path
@@ -48,6 +49,7 @@ title: Whats up IYC
                 </svg>
                 {{ post.content | number_of_words }} words
               </span>
+			-->
             </div>
           </div>
           <div class="ml-4 flex-shrink-0">
