@@ -1,7 +1,7 @@
-title: "Whats up IYC"
-description: "A creative forum for developers"
-baseurl: ""
-url: ""
+title: 'Whats up IYC'
+description: 'A creative forum for developers'
+baseurl: '/iyc'
+url: ''
 
 markdown: kramdown
 highlighter: rouge
@@ -14,12 +14,12 @@ collections:
 
 defaults:
   - scope:
-      path: ""
-      type: "posts"
+      path: ''
+      type: 'posts'
     values:
-      layout: "post"
+      layout: 'post'
   - scope:
-      path: ""
-      type: "topics"
+      path: ''
+      type: 'topics'
     values:
-      layout: "topic"
+      layout: 'topic'
