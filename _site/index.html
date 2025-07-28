@@ -1,9 +1,41 @@
----
-layout: default
-title: Forum Home
----
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forum Home</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-white min-h-screen text-gray-900">
+    <!-- Header -->
+    <header class="border-b border-gray-200 bg-white">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 flex items-center justify-center">
+                        <img src="https://www.shutterstock.com/image-vector/load-shiva-one-power-ful-260nw-2275326789.jpg" 
+                             alt="Shiva Logo" 
+                             class="w-12 h-12 object-contain">
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">
+                            Whats up IYC
+                        </h1>
+                    </div>
+                </div>
+                <nav class="flex items-center">
+                    <a href="/post/" class="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-all">
+                        Post
+                    </a>
+                </nav>
+            </div>
+        </div>
+    </header>
 
-<div class="container mx-auto px-4 py-6">
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+        <div class="container mx-auto px-4 py-6">
   <!-- Main Forum Content -->
   <div class="bg-white rounded-lg shadow-md overflow-hidden">
     
@@ -196,3 +228,14 @@ title: Forum Home
     </div>
   </div>
 </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-200 mt-16 bg-white">
+        <div class="container mx-auto px-6 py-8 text-center text-gray-600">
+            <p>&copy; 2024 Whats up IYC. Powered by Jekyll & Creativity.</p>
+        </div>
+    </footer>
+</body>
+</html>

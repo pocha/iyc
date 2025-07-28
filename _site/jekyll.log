@@ -1,0 +1,32 @@
+nohup: ignoring input
+Configuration file: /home/nonbios/forum-theme/_config.yml
+            Source: /home/nonbios/forum-theme
+       Destination: /home/nonbios/forum-theme/_site
+ Incremental build: disabled. Enable with --incremental
+      Generating... 
+                    done in 0.013 seconds.
+ Auto-regeneration: enabled for '/home/nonbios/forum-theme'
+jekyll 3.9.0 | Error:  Address already in use - bind(2) for 0.0.0.0:4001
+/usr/lib/ruby/3.0.0/socket.rb:201:in `bind': Address already in use - bind(2) for 0.0.0.0:4001 (Errno::EADDRINUSE)
+	from /usr/lib/ruby/3.0.0/socket.rb:201:in `listen'
+	from /usr/lib/ruby/3.0.0/socket.rb:765:in `block in tcp_server_sockets'
+	from /usr/lib/ruby/3.0.0/socket.rb:227:in `each'
+	from /usr/lib/ruby/3.0.0/socket.rb:227:in `foreach'
+	from /usr/lib/ruby/3.0.0/socket.rb:763:in `tcp_server_sockets'
+	from /usr/share/rubygems-integration/all/gems/webrick-1.7.0/lib/webrick/utils.rb:60:in `create_listeners'
+	from /usr/share/rubygems-integration/all/gems/webrick-1.7.0/lib/webrick/server.rb:130:in `listen'
+	from /usr/share/rubygems-integration/all/gems/webrick-1.7.0/lib/webrick/server.rb:111:in `initialize'
+	from /usr/share/rubygems-integration/all/gems/webrick-1.7.0/lib/webrick/httpserver.rb:47:in `initialize'
+	from /usr/lib/ruby/vendor_ruby/jekyll/commands/serve.rb:228:in `new'
+	from /usr/lib/ruby/vendor_ruby/jekyll/commands/serve.rb:228:in `start_up_webrick'
+	from /usr/lib/ruby/vendor_ruby/jekyll/commands/serve.rb:104:in `process'
+	from /usr/lib/ruby/vendor_ruby/jekyll/commands/serve.rb:93:in `block in start'
+	from /usr/lib/ruby/vendor_ruby/jekyll/commands/serve.rb:93:in `each'
+	from /usr/lib/ruby/vendor_ruby/jekyll/commands/serve.rb:93:in `start'
+	from /usr/lib/ruby/vendor_ruby/jekyll/commands/serve.rb:75:in `block (2 levels) in init_with_program'
+	from /usr/share/rubygems-integration/all/gems/mercenary-0.3.6/lib/mercenary/command.rb:220:in `block in execute'
+	from /usr/share/rubygems-integration/all/gems/mercenary-0.3.6/lib/mercenary/command.rb:220:in `each'
+	from /usr/share/rubygems-integration/all/gems/mercenary-0.3.6/lib/mercenary/command.rb:220:in `execute'
+	from /usr/share/rubygems-integration/all/gems/mercenary-0.3.6/lib/mercenary/program.rb:42:in `go'
+	from /usr/share/rubygems-integration/all/gems/mercenary-0.3.6/lib/mercenary.rb:19:in `program'
+	from /usr/bin/jekyll:13:in `<main>'

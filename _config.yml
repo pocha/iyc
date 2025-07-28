@@ -1,0 +1,25 @@
+title: "Whats up IYC"
+description: "A creative forum for developers"
+baseurl: ""
+url: ""
+
+markdown: kramdown
+highlighter: rouge
+permalink: /:categories/:title/
+
+collections:
+  topics:
+    output: true
+    permalink: /topic/:name/
+
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"
+  - scope:
+      path: ""
+      type: "topics"
+    values:
+      layout: "topic"
