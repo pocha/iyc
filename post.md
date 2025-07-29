@@ -175,22 +175,50 @@ title: Create New Post
         errorMessage.classList.add('hidden');
 
         try {
-            // Prepare form data
-            const formData = new FormData();
-            formData.append('title', document.getElementById('title').value);
-            formData.append('description', document.getElementById('description').value);
-            if (document.getElementById('file').files[0]) {
-                formData.append('file', document.getElementById('file').files[0]);
+            // Validate required fields
+            const title = document.getElementById('title').value.trim();
+            const description = document.getElementById('description').value.trim();
+            
+            if (!title || !description) {
+                throw new Error('Please fill in all required fields');
             }
 
-            // Submit to Firebase function
-            const response = await fetch(FIREBASE_FUNCTION_URL, {
-                method: 'POST',
-                body: formData
-            });
+            const fileInput = document.getElementById('file');
+            const hasFile = fileInput.files && fileInput.files.length > 0 && fileInput.files[0];
 
-            if (response.ok) {
-                const result = await response.json();
+            let response;
+            
+            if (hasFile) {
+                // If file is attached, use FormData for multipart/form-data
+                const formData = new FormData();
+                formData.append('title', title);
+                formData.append('description', description);
+                formData.append('file', fileInput.files[0]);
+                
+                response = await fetch(FIREBASE_FUNCTION_URL, {
+                    method: 'POST',
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            
+            if (result.success) {
+                showMessage('Post submitted successfully!', 'success');
+                document.getElementById('postForm').reset();
+            } else {
+                throw new Error(result.error || 'Submission failed');
+            }
+            
+        } catch (error) {
+            console.error('Error submitting post:', error);
+            showMessage(error.message || 'An error occurred while submitting the post', 'error');
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Submit Post';
+        }
+    });
                 console.log('Success:', result);
                 
                 // Show success message
