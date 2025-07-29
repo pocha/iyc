@@ -114,11 +114,6 @@ ${description}
       }
     }
 
-    postContent += `
----
-*This post was automatically generated from a user submission.*
-`
-
     // Create the Jekyll post
     const response = await octokit.repos.createOrUpdateFileContents({
       owner: GITHUB_OWNER,
