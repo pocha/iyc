@@ -10,7 +10,7 @@ admin.initializeApp()
 
 // Configure CORS to allow requests from any origin
 const corsHandler = cors({
-  origin: ["http://20.42.15.153:4001/", "http://localhost:400", "https://pocha.github.io"],
+  origin: ["http://20.42.15.153:4001", "http://localhost:4000", "https://pocha.github.io"],
   methods: ["GET", "POST", "OPTIONS"],
   credentials: true,
 })
@@ -197,14 +197,6 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
             res.status(400).json({
               success: false,
               error: "Title and description are required fields.",
-            })
-            return
-          }
-
-          if (!file) {
-            res.status(400).json({
-              success: false,
-              error: "File upload is required.",
             })
             return
           }
