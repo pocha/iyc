@@ -131,9 +131,7 @@ ${description}
 
     return {
       success: true,
-      postUrl: `https://${GITHUB_OWNER}.github.io/${GITHUB_REPO}/${now.getFullYear()}/${String(
-        now.getMonth() + 1
-      ).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}/${slug}.html`,
+      postUrl: `http://20.42.15.153:4001/iyc/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}/${slug}.html`,
       githubUrl: response.data.content.html_url,
     }
   } catch (error) {
@@ -206,7 +204,8 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       busboyInstance.on("file", (fieldname, file, info) => {
         console.log(`File received: ${fieldname}, filename: ${info.filename}, mimetype: ${info.mimeType}`)
 
-        if (fieldname === "file" && info.filename) {
+        // Only process if filename exists (not empty file field)
+        if (fieldname === "file" && info.filename && info.filename.trim() !== "") {
           fileName = info.filename
           fileType = info.mimeType
           const chunks = []
@@ -222,7 +221,8 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
             }
           })
         } else {
-          // Skip other files or empty file fields
+          // Skip empty file fields or files without names
+          console.log("Skipping empty file field")
           file.resume()
         }
       })
@@ -260,7 +260,13 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
           }
 
           // Create Jekyll post on GitHub
-          const jekyllResult = await createJekyllPost(title.trim(), description.trim(), fileName, fileBase64, fileType)
+          const jekyllResult = await createJekyllPost(
+            title,
+            description,
+            fileName,
+            fileBase64,
+            fileType
+          )
 
           // Log successful submission
           console.log(
@@ -338,8 +344,19 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
         clearTimeout(timeout)
       })
 
-      // Start parsing
-      busboyInstance.end(req.rawBody)
+      // Start parsing - handle case where req.rawBody might be undefined
+      if (req.rawBody) {
+        busboyInstance.end(req.rawBody)
+      } else {
+        // For Firebase Functions, we need to read the request body
+        let body = Buffer.alloc(0)
+        req.on('data', (chunk) => {
+          body = Buffer.concat([body, chunk])
+        })
+        req.on('end', () => {
+          busboyInstance.end(body)
+        })
+      }
     } catch (error) {
       console.error("Unexpected error:", error)
       res.status(500).json({
