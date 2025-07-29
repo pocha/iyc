@@ -1,7 +1,7 @@
 const functions = require("firebase-functions")
 const admin = require("firebase-admin")
 const cors = require("cors")
-const multer = require("multer")
+const Busboy = require("busboy")
 const { v4: uuidv4 } = require("uuid")
 const { Octokit } = require("@octokit/rest")
 
@@ -13,18 +13,6 @@ const corsHandler = cors({
   origin: ["http://20.42.15.153:4001", "http://localhost:4000", "https://pocha.github.io"],
   methods: ["GET", "POST", "OPTIONS"],
   credentials: true,
-})
-
-// Configure multer for handling multipart/form-data
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-  },
-  fileFilter: (req, file, cb) => {
-    // Accept all file types
-    cb(null, true)
-  },
 })
 
 // GitHub configuration - Set these in Firebase Functions config
@@ -83,46 +71,47 @@ ${description}
 `
 
       // If it's an image, embed it in the post
-    if (fileType.startsWith("image/")) {
-      // Save image to assets folder
-      const imageFileName = `${dateStr}-${slug}-${fileName}`
-      const imagePath = `assets/images/submissions/${imageFileName}`
+      if (fileType.startsWith("image/")) {
+        // Save image to assets folder
+        const imageFileName = `${dateStr}-${slug}-${fileName}`
+        const imagePath = `assets/images/submissions/${imageFileName}`
 
-      // Create the image file
-      await octokit.repos.createOrUpdateFileContents({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        path: imagePath,
-        message: `Add image for post: ${title}`,
-        content: fileContent, // Base64 content
-        branch: GITHUB_BRANCH,
-      })
+        // Create the image file
+        await octokit.repos.createOrUpdateFileContents({
+          owner: GITHUB_OWNER,
+          repo: GITHUB_REPO,
+          path: imagePath,
+          message: `Add image for post: ${title}`,
+          content: fileContent, // Base64 content
+          branch: GITHUB_BRANCH,
+        })
 
-      // Add image to post content
-      postContent += `
+        // Add image to post content
+        postContent += `
 ![${fileName}](/assets/images/submissions/${imageFileName})
 
 `
-    } else {
-      // For non-image files, create a download link
-      const fileFileName = `${dateStr}-${slug}-${fileName}`
-      const filePath = `assets/files/submissions/${fileFileName}`
+      } else {
+        // For non-image files, create a download link
+        const fileFileName = `${dateStr}-${slug}-${fileName}`
+        const filePath = `assets/files/submissions/${fileFileName}`
 
-      // Create the file
-      await octokit.repos.createOrUpdateFileContents({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        path: filePath,
-        message: `Add file for post: ${title}`,
-        content: fileContent, // Base64 content
-        branch: GITHUB_BRANCH,
-      })
+        // Create the file
+        await octokit.repos.createOrUpdateFileContents({
+          owner: GITHUB_OWNER,
+          repo: GITHUB_REPO,
+          path: filePath,
+          message: `Add file for post: ${title}`,
+          content: fileContent, // Base64 content
+          branch: GITHUB_BRANCH,
+        })
 
-      // Add download link to post content
-      postContent += `
+        // Add download link to post content
+        postContent += `
 [Download ${fileName}](/assets/files/submissions/${fileFileName})
 
 `
+      }
     }
 
     postContent += `
@@ -135,7 +124,7 @@ ${description}
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
       path: postPath,
-      message: `New post: ${title}`,
+      message: `Add new post: ${title}`,
       content: Buffer.from(postContent).toString("base64"),
       branch: GITHUB_BRANCH,
     })
@@ -181,21 +170,45 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
         return
       }
 
-      // Use multer middleware to parse multipart form data
-      upload.single("file")(req, res, async (err) => {
-        if (err) {
-          console.error("Multer error:", err)
-          res.status(400).json({
-            success: false,
-            error: "File upload error: " + err.message,
-          })
-          return
-        }
+      // Parse multipart form data using Busboy
+      const busboy = new Busboy({ headers: req.headers })
+      const fields = {}
+      let fileData = null
+      let fileName = null
+      let fileType = null
 
+      // Handle form fields
+      busboy.on('field', (fieldname, val) => {
+        fields[fieldname] = val
+      })
+
+      // Handle file uploads
+      busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
+        if (fieldname === 'file') {
+          fileName = filename
+          fileType = mimetype
+          const chunks = []
+          
+          file.on('data', (chunk) => {
+            chunks.push(chunk)
+          })
+          
+          file.on('end', () => {
+            if (chunks.length > 0) {
+              fileData = Buffer.concat(chunks)
+            }
+          })
+        } else {
+          // Skip other files
+          file.resume()
+        }
+      })
+
+      // Handle completion
+      busboy.on('finish', async () => {
         try {
           // Extract form data
-          const { title, description } = req.body
-          const file = req.file
+          const { title, description } = fields
 
           // Validate required fields
           if (!title || !description) {
@@ -206,21 +219,14 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
             return
           }
 
-
           // Generate unique ID for this submission
           const submissionId = uuidv4()
           const timestamp = admin.firestore.Timestamp.now()
 
-          // Convert file buffer to base64
-          // Handle optional file upload
-          let fileBase64 = null;
-          let fileName = null;
-          let fileType = null;
-          
-          if (file) {
-            fileBase64 = file.buffer.toString("base64");
-            fileName = file.originalname;
-            fileType = file.mimetype;
+          // Convert file buffer to base64 if file exists
+          let fileBase64 = null
+          if (fileData && fileName && fileType) {
+            fileBase64 = fileData.toString("base64")
           }
 
           // Create Jekyll post on GitHub
@@ -231,32 +237,6 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
             fileBase64,
             fileType
           )
-          /*
-          // Prepare submission data for Firestore
-          const submissionData = {
-            id: submissionId,
-            title: title.trim(),
-            description: description.trim(),
-            file: file ? {
-              name: file.originalname,
-              type: file.mimetype,
-              size: file.size,
-              uploadedAt: timestamp,
-            },
-            submittedAt: timestamp,
-            status: "published",
-            jekyllPost: {
-              postUrl: jekyllResult.postUrl,
-              githubUrl: jekyllResult.githubUrl,
-              createdAt: timestamp,
-            },
-          }
-
-          
-          // Store in Firestore
-          const db = admin.firestore();
-          await db.collection('submissions').doc(submissionId).set(submissionData);
-		  */
 
           // Log successful submission
           console.log(
@@ -268,11 +248,11 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
             success: true,
             message: "Form submitted successfully and Jekyll post created!",
             data: {
-              submissionId: submissionId,
+              id: submissionId,
               title: title,
               description: description,
-              fileName: file ? file.originalname : null,
-              fileSize: file.size,
+              fileName: fileName,
+              fileSize: fileData ? fileData.length : 0,
               submittedAt: timestamp.toDate().toISOString(),
               postUrl: jekyllResult.postUrl,
               githubUrl: jekyllResult.githubUrl,
@@ -300,6 +280,19 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
           }
         }
       })
+
+      // Handle errors
+      busboy.on('error', (error) => {
+        console.error("Busboy error:", error)
+        res.status(400).json({
+          success: false,
+          error: "Form parsing error: " + error.message,
+        })
+      })
+
+      // Start parsing
+      req.pipe(busboy)
+
     } catch (error) {
       console.error("Unexpected error:", error)
       res.status(500).json({
