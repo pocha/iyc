@@ -1,7 +1,7 @@
 const functions = require("firebase-functions")
 const admin = require("firebase-admin")
 const cors = require("cors")
-const Busboy = require("busboy")
+const busboy = require("busboy")
 const { v4: uuidv4 } = require("uuid")
 const { Octokit } = require("@octokit/rest")
 
@@ -171,19 +171,19 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       }
 
       // Parse multipart form data using Busboy
-      const busboy = new Busboy({ headers: req.headers })
+      const busboyInstance = busboy({ headers: req.headers })
       const fields = {}
       let fileData = null
       let fileName = null
       let fileType = null
 
       // Handle form fields
-      busboy.on('field', (fieldname, val) => {
+      busboyInstance.on('field', (fieldname, val) => {
         fields[fieldname] = val
       })
 
       // Handle file uploads
-      busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
+      busboyInstance.on('file', (fieldname, file, filename, encoding, mimetype) => {
         if (fieldname === 'file') {
           fileName = filename
           fileType = mimetype
@@ -205,7 +205,7 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       })
 
       // Handle completion
-      busboy.on('finish', async () => {
+      busboyInstance.on('finish', async () => {
         try {
           // Extract form data
           const { title, description } = fields
@@ -282,7 +282,7 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       })
 
       // Handle errors
-      busboy.on('error', (error) => {
+      busboyInstance.on('error', (error) => {
         console.error("Busboy error:", error)
         res.status(400).json({
           success: false,
@@ -291,7 +291,7 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       })
 
       // Start parsing
-      req.pipe(busboy)
+      req.pipe(busboyInstance)
 
     } catch (error) {
       console.error("Unexpected error:", error)
