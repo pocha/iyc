@@ -40,7 +40,7 @@ const octokit = new Octokit({
 })
 
 // Function to create Jekyll post
-async function createJekyllPost(title, description, fileName, fileContent, fileType) {
+async function createJekyllPost(title, description, fileName = null, fileContent = null, fileType = null) {
   try {
     const now = new Date()
     const dateStr = now.toISOString().split("T")[0] // YYYY-MM-DD format
@@ -69,7 +69,11 @@ author: User Submission
 ---
 
 ${description}
+`
 
+    // Only add file section if file is provided
+    if (fileName && fileContent && fileType) {
+      postContent += `
 ## Attached File
 
 **File Name:** ${fileName}  
@@ -78,47 +82,48 @@ ${description}
 
 `
 
-    // If it's an image, embed it in the post
-    if (fileType.startsWith("image/")) {
-      // Save image to assets folder
-      const imageFileName = `${dateStr}-${slug}-${fileName}`
-      const imagePath = `assets/images/submissions/${imageFileName}`
+      // If it's an image, embed it in the post
+      if (fileType.startsWith("image/")) {
+        // Save image to assets folder
+        const imageFileName = `${dateStr}-${slug}-${fileName}`
+        const imagePath = `assets/images/submissions/${imageFileName}`
 
-      // Create the image file
-      await octokit.repos.createOrUpdateFileContents({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        path: imagePath,
-        message: `Add image for post: ${title}`,
-        content: fileContent, // Base64 content
-        branch: GITHUB_BRANCH,
-      })
+        // Create the image file
+        await octokit.repos.createOrUpdateFileContents({
+          owner: GITHUB_OWNER,
+          repo: GITHUB_REPO,
+          path: imagePath,
+          message: `Add image for post: ${title}`,
+          content: fileContent, // Base64 content
+          branch: GITHUB_BRANCH,
+        })
 
-      // Add image to post content
-      postContent += `
+        // Add image to post content
+        postContent += `
 ![${fileName}](/assets/images/submissions/${imageFileName})
 
 `
-    } else {
-      // For non-image files, create a download link
-      const fileFileName = `${dateStr}-${slug}-${fileName}`
-      const filePath = `assets/files/submissions/${fileFileName}`
+      } else {
+        // For non-image files, create a download link
+        const fileFileName = `${dateStr}-${slug}-${fileName}`
+        const filePath = `assets/files/submissions/${fileFileName}`
 
-      // Create the file
-      await octokit.repos.createOrUpdateFileContents({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        path: filePath,
-        message: `Add file for post: ${title}`,
-        content: fileContent, // Base64 content
-        branch: GITHUB_BRANCH,
-      })
+        // Create the file
+        await octokit.repos.createOrUpdateFileContents({
+          owner: GITHUB_OWNER,
+          repo: GITHUB_REPO,
+          path: filePath,
+          message: `Add file for post: ${title}`,
+          content: fileContent, // Base64 content
+          branch: GITHUB_BRANCH,
+        })
 
-      // Add download link to post content
-      postContent += `
+        // Add download link to post content
+        postContent += `
 [Download ${fileName}](/assets/files/submissions/${fileFileName})
 
 `
+      }
     }
 
     postContent += `
@@ -137,7 +142,6 @@ ${description}
     })
 
     return {
-      success: true,
       postUrl: `https://${GITHUB_OWNER}.github.io/${GITHUB_REPO}/${now.getFullYear()}/${String(
         now.getMonth() + 1
       ).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}/${slug}.html`,
@@ -202,56 +206,32 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
             return
           }
 
-          if (!file) {
-            res.status(400).json({
-              success: false,
-              error: "File upload is required.",
-            })
-            return
-          }
-
           // Generate unique ID for this submission
           const submissionId = uuidv4()
           const timestamp = admin.firestore.Timestamp.now()
 
-          // Convert file buffer to base64
-          const fileBase64 = file.buffer.toString("base64")
+          let jekyllResult
 
-          // Create Jekyll post on GitHub
-          const jekyllResult = await createJekyllPost(
-            title.trim(),
-            description.trim(),
-            file.originalname,
-            fileBase64,
-            file.mimetype
-          )
+          // Handle file upload (optional)
+          if (file && file.size > 0 && file.originalname !== 'empty.txt') {
+            // Convert file buffer to base64
+            const fileBase64 = file.buffer.toString("base64")
 
-          /*
-          // Prepare submission data for Firestore
-          const submissionData = {
-            id: submissionId,
-            title: title.trim(),
-            description: description.trim(),
-            file: {
-              name: file.originalname,
-              type: file.mimetype,
-              size: file.size,
-              uploadedAt: timestamp,
-            },
-            submittedAt: timestamp,
-            status: "published",
-            jekyllPost: {
-              postUrl: jekyllResult.postUrl,
-              githubUrl: jekyllResult.githubUrl,
-              createdAt: timestamp,
-            },
+            // Create Jekyll post with file
+            jekyllResult = await createJekyllPost(
+              title.trim(),
+              description.trim(),
+              file.originalname,
+              fileBase64,
+              file.mimetype
+            )
+          } else {
+            // Create Jekyll post without file
+            jekyllResult = await createJekyllPost(
+              title.trim(),
+              description.trim()
+            )
           }
-
-          
-          // Store in Firestore
-          const db = admin.firestore();
-          await db.collection('submissions').doc(submissionId).set(submissionData);
-		  */
 
           // Log successful submission
           console.log(
@@ -266,9 +246,7 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
               submissionId: submissionId,
               title: title,
               description: description,
-              fileName: file.originalname,
-              fileSize: file.size,
-              submittedAt: timestamp.toDate().toISOString(),
+              fileName: file ? file.originalname : null,
               postUrl: jekyllResult.postUrl,
               githubUrl: jekyllResult.githubUrl,
             },
