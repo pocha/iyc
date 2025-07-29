@@ -61,15 +61,6 @@ ${description}
 
     // Only add file section if file exists
     if (fileName && fileContent && fileType) {
-      postContent += `
-## Attached File
-
-**File Name:** ${fileName}  
-**File Type:** ${fileType}  
-**Uploaded:** ${timeStr}
-
-`
-
       // If it's an image, embed it in the post
       if (fileType.startsWith("image/")) {
         // Save image to assets folder
@@ -87,9 +78,9 @@ ${description}
         })
 
         // Add image to post content
-        postContent += `
-![${fileName}](/assets/images/submissions/${imageFileName})
-
+        postContent += `<p>
+![${fileName}](${process.env.BASE_PATH}/assets/images/submissions/${imageFileName})
+</p>
 `
       } else {
         // For non-image files, create a download link
@@ -107,9 +98,9 @@ ${description}
         })
 
         // Add download link to post content
-        postContent += `
-[Download ${fileName}](/assets/files/submissions/${fileFileName})
-
+        postContent += `<p>
+[Download ${fileName}](${process.env.BASE_PATH}/assets/files/submissions/${fileFileName})
+</p>
 `
       }
     }
@@ -126,7 +117,10 @@ ${description}
 
     return {
       success: true,
-      postUrl: `http://20.42.15.153:4001/iyc/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}/${slug}.html`,
+      postUrl: `http://20.42.15.153:4001/iyc/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(
+        2,
+        "0"
+      )}/${String(now.getDate()).padStart(2, "0")}/${slug}.html`,
       githubUrl: response.data.content.html_url,
     }
   } catch (error) {
@@ -255,13 +249,7 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
           }
 
           // Create Jekyll post on GitHub
-          const jekyllResult = await createJekyllPost(
-            title,
-            description,
-            fileName,
-            fileBase64,
-            fileType
-          )
+          const jekyllResult = await createJekyllPost(title, description, fileName, fileBase64, fileType)
 
           // Log successful submission
           console.log(
@@ -345,10 +333,10 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       } else {
         // For Firebase Functions, we need to read the request body
         let body = Buffer.alloc(0)
-        req.on('data', (chunk) => {
+        req.on("data", (chunk) => {
           body = Buffer.concat([body, chunk])
         })
-        req.on('end', () => {
+        req.on("end", () => {
           busboyInstance.end(body)
         })
       }
