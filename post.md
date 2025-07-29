@@ -16,7 +16,7 @@ title: Create New Post
 
     <!-- Form Container -->
     <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
-        <form id="submissionForm" class="space-y-6">
+        <form id="submissionForm" enctype="multipart/form-data" class="space-y-6">
             <!-- Title Field -->
             <div class="group">
                 <label for="title" class="block text-gray-800 text-lg font-semibold mb-2">
