@@ -108,7 +108,7 @@ title: Create New Post
 
 <script>
     // Firebase Function URL - Replace with your actual Firebase function URL
-    const FIREBASE_FUNCTION_URL = "https://asia-south1-isocnet-2d37f.cloudfunctions.net/submitForm";
+    const FIREBASE_FUNCTION_URL = 'https://asia-south1-isocnet-2d37f.cloudfunctions.net/submitForm';
 
     // File upload handling
     const fileInput = document.getElementById('file');
