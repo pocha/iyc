@@ -22,10 +22,10 @@ title: Create New Post
                 <label for="title" class="block text-gray-800 text-lg font-semibold mb-2">
                     🎯 Post Title
                 </label>
-                <input 
-                    type="text" 
-                    id="title" 
-                    name="title" 
+                <input
+                    type="text"
+                    id="title"
+                    name="title"
                     required
                     class="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:bg-white transition-all duration-300 text-lg"
                     placeholder="Enter your post title..."
@@ -37,9 +37,9 @@ title: Create New Post
                 <label for="description" class="block text-gray-800 text-lg font-semibold mb-2">
                     📝 Description
                 </label>
-                <textarea 
-                    id="description" 
-                    name="description" 
+                <textarea
+                    id="description"
+                    name="description"
                     required
                     rows="6"
                     class="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:bg-white transition-all duration-300 text-lg resize-none"
@@ -53,10 +53,10 @@ title: Create New Post
                     📎 Attach File (Optional)
                 </label>
                 <div class="file-upload-area bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:bg-gray-100 hover:border-orange-400 transition-all duration-300">
-                    <input 
-                        type="file" 
-                        id="file" 
-                        name="file" 
+                    <input
+                        type="file"
+                        id="file"
+                        name="file"
                         class="hidden"
                         accept="*/*"
                     >
@@ -75,8 +75,8 @@ title: Create New Post
 
             <!-- Submit Button -->
             <div class="pt-4 flex gap-4">
-                <button 
-                    type="submit" 
+                <button
+                    type="submit"
                     id="submitBtn"
                     class="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-orange-300"
                 >
@@ -103,11 +103,12 @@ title: Create New Post
             <p id="errorText" class="text-red-700">Please try again later.</p>
         </div>
     </div>
+
 </div>
 
 <script>
     // Firebase Function URL - Replace with your actual Firebase function URL
-    const FIREBASE_FUNCTION_URL = 'https://your-region-your-project.cloudfunctions.net/submitForm';
+    const FIREBASE_FUNCTION_URL = "https://asia-south1-isocnet-2d37f.cloudfunctions.net/submitForm";
 
     // File upload handling
     const fileInput = document.getElementById('file');
