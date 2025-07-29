@@ -206,28 +206,30 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
             return
           }
 
-          if (!file) {
-            res.status(400).json({
-              success: false,
-              error: "File upload is required.",
-            })
-            return
-          }
 
           // Generate unique ID for this submission
           const submissionId = uuidv4()
           const timestamp = admin.firestore.Timestamp.now()
 
           // Convert file buffer to base64
-          const fileBase64 = file.buffer.toString("base64")
+          // Handle optional file upload
+          let fileBase64 = null;
+          let fileName = null;
+          let fileType = null;
+          
+          if (file) {
+            fileBase64 = file.buffer.toString("base64");
+            fileName = file.originalname;
+            fileType = file.mimetype;
+          }
 
           // Create Jekyll post on GitHub
           const jekyllResult = await createJekyllPost(
             title.trim(),
             description.trim(),
-            file.originalname,
+            fileName,
             fileBase64,
-            file.mimetype
+            fileType
           )
 
           // Prepare submission data for Firestore
@@ -235,7 +237,7 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
             id: submissionId,
             title: title.trim(),
             description: description.trim(),
-            file: {
+            file: file ? {
               name: file.originalname,
               type: file.mimetype,
               size: file.size,
