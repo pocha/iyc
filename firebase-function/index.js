@@ -69,6 +69,11 @@ author: User Submission
 
 ${description}
 
+`
+
+    // Only add file section if file exists
+    if (fileName && fileContent && fileType) {
+      postContent += `
 ## Attached File
 
 **File Name:** ${fileName}  
@@ -77,7 +82,7 @@ ${description}
 
 `
 
-    // If it's an image, embed it in the post
+      // If it's an image, embed it in the post
     if (fileType.startsWith("image/")) {
       // Save image to assets folder
       const imageFileName = `${dateStr}-${slug}-${fileName}`
@@ -264,7 +269,7 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
               submissionId: submissionId,
               title: title,
               description: description,
-              fileName: file.originalname,
+              fileName: file ? file.originalname : null,
               fileSize: file.size,
               submittedAt: timestamp.toDate().toISOString(),
               postUrl: jekyllResult.postUrl,
