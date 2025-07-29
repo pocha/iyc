@@ -231,7 +231,7 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
             fileBase64,
             fileType
           )
-
+          /*
           // Prepare submission data for Firestore
           const submissionData = {
             id: submissionId,
@@ -252,7 +252,7 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
             },
           }
 
-          /*
+          
           // Store in Firestore
           const db = admin.firestore();
           await db.collection('submissions').doc(submissionId).set(submissionData);
