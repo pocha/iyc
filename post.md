@@ -197,6 +197,22 @@ title: Create New Post
                 
                 response = await fetch(FIREBASE_FUNCTION_URL, {
                     method: 'POST',
+                    body: formData
+                });
+            } else {
+                // If no file, send as JSON to avoid Multer issues
+                response = await fetch(FIREBASE_FUNCTION_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        description: description
+                    })
+                });
+            }
+
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
@@ -216,13 +232,21 @@ title: Create New Post
             } else {
                 throw new Error(result.error || 'Submission failed');
             }
-                throw new Error(result.error || 'Submission failed');
-            }
             
         } catch (error) {
             console.error('Error submitting post:', error);
             
             // Show error message
+            document.getElementById('errorText').textContent = error.message || 'An error occurred while submitting the post';
+            errorMessage.classList.remove('hidden');
+        } finally {
+            // Reset button state
+            submitBtn.disabled = false;
+            submitText.classList.remove('hidden');
+            loadingText.classList.add('hidden');
+        }
+    });
+</script>
             document.getElementById('errorText').textContent = error.message || 'An error occurred while submitting the post';
             errorMessage.classList.remove('hidden');
         } finally {
