@@ -131,7 +131,9 @@ ${description}
 
     return {
       success: true,
-      postUrl: `https://${GITHUB_OWNER}.github.io/${GITHUB_REPO}/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}/${slug}.html`,
+      postUrl: `https://${GITHUB_OWNER}.github.io/${GITHUB_REPO}/${now.getFullYear()}/${String(
+        now.getMonth() + 1
+      ).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}/${slug}.html`,
       githubUrl: response.data.content.html_url,
     }
   } catch (error) {
@@ -169,8 +171,8 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       }
 
       // Check if request has multipart content-type
-      const contentType = req.headers['content-type'] || ''
-      if (!contentType.includes('multipart/form-data')) {
+      const contentType = req.headers["content-type"] || ""
+      if (!contentType.includes("multipart/form-data")) {
         res.status(400).json({
           success: false,
           error: "Invalid content type. Expected multipart/form-data.",
@@ -179,15 +181,15 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       }
 
       // Parse multipart form data using Busboy
-      const busboyInstance = busboy({ 
+      const busboyInstance = busboy({
         headers: req.headers,
         limits: {
           fileSize: 10 * 1024 * 1024, // 10MB limit
           files: 1, // Only allow 1 file
-          fields: 10 // Limit number of fields
-        }
+          fields: 10, // Limit number of fields
+        },
       })
-      
+
       const fields = {}
       let fileData = null
       let fileName = null
@@ -195,25 +197,25 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       let hasFinished = false
 
       // Handle form fields
-      busboyInstance.on('field', (fieldname, val) => {
+      busboyInstance.on("field", (fieldname, val) => {
         console.log(`Field received: ${fieldname} = ${val}`)
         fields[fieldname] = val
       })
 
       // Handle file uploads
-      busboyInstance.on('file', (fieldname, file, info) => {
+      busboyInstance.on("file", (fieldname, file, info) => {
         console.log(`File received: ${fieldname}, filename: ${info.filename}, mimetype: ${info.mimeType}`)
-        
-        if (fieldname === 'file' && info.filename) {
+
+        if (fieldname === "file" && info.filename) {
           fileName = info.filename
           fileType = info.mimeType
           const chunks = []
-          
-          file.on('data', (chunk) => {
+
+          file.on("data", (chunk) => {
             chunks.push(chunk)
           })
-          
-          file.on('end', () => {
+
+          file.on("end", () => {
             if (chunks.length > 0) {
               fileData = Buffer.concat(chunks)
               console.log(`File data received: ${fileData.length} bytes`)
@@ -226,13 +228,13 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       })
 
       // Handle completion
-      busboyInstance.on('finish', async () => {
+      busboyInstance.on("finish", async () => {
         if (hasFinished) return // Prevent double processing
         hasFinished = true
-        
-        console.log('Busboy finished parsing')
-        console.log('Fields received:', Object.keys(fields))
-        console.log('File info:', { fileName, fileType, hasFileData: !!fileData })
+
+        console.log("Busboy finished parsing")
+        console.log("Fields received:", Object.keys(fields))
+        console.log("File info:", { fileName, fileType, hasFileData: !!fileData })
 
         try {
           // Extract form data
@@ -258,13 +260,7 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
           }
 
           // Create Jekyll post on GitHub
-          const jekyllResult = await createJekyllPost(
-            title.trim(),
-            description.trim(),
-            fileName,
-            fileBase64,
-            fileType
-          )
+          const jekyllResult = await createJekyllPost(title.trim(), description.trim(), fileName, fileBase64, fileType)
 
           // Log successful submission
           console.log(
@@ -310,10 +306,10 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       })
 
       // Handle errors
-      busboyInstance.on('error', (error) => {
+      busboyInstance.on("error", (error) => {
         if (hasFinished) return // Don't handle errors after finishing
         hasFinished = true
-        
+
         console.error("Busboy error:", error)
         res.status(400).json({
           success: false,
@@ -334,17 +330,16 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       }, 30000) // 30 second timeout
 
       // Clear timeout when busboy finishes
-      busboyInstance.on('finish', () => {
+      busboyInstance.on("finish", () => {
         clearTimeout(timeout)
       })
 
-      busboyInstance.on('error', () => {
+      busboyInstance.on("error", () => {
         clearTimeout(timeout)
       })
 
       // Start parsing
-      req.pipe(busboyInstance)
-
+      busboyInstance.end(req.rawBody)
     } catch (error) {
       console.error("Unexpected error:", error)
       res.status(500).json({
