@@ -10,9 +10,8 @@ admin.initializeApp()
 
 // Configure CORS to allow requests from any origin
 const corsHandler = cors({
-  origin: true,
+  origin: ["http://20.42.15.153:4001/", "http://localhost:400", "https://pocha.github.io"],
   methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
 })
 
@@ -150,7 +149,7 @@ ${description}
 }
 
 // Main form submission handler
-exports.submitForm = functions.https.onRequest((req, res) => {
+exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) => {
   return corsHandler(req, res, async () => {
     // Handle preflight OPTIONS request
     if (req.method === "OPTIONS") {
