@@ -205,40 +205,25 @@ title: Create New Post
             const result = await response.json();
             
             if (result.success) {
-                showMessage('Post submitted successfully!', 'success');
-                document.getElementById('postForm').reset();
-            } else {
-                throw new Error(result.error || 'Submission failed');
-            }
-            
-        } catch (error) {
-            console.error('Error submitting post:', error);
-            showMessage(error.message || 'An error occurred while submitting the post', 'error');
-        } finally {
-            submitButton.disabled = false;
-            submitButton.textContent = 'Submit Post';
-        }
-    });
-                console.log('Success:', result);
-                
                 // Show success message
                 successMessage.classList.remove('hidden');
                 
                 // Reset form after delay
                 setTimeout(() => {
                     document.getElementById('submissionForm').reset();
-                    fileUploadContent.classList.remove('hidden');
-                    fileSelectedContent.classList.add('hidden');
                     successMessage.classList.add('hidden');
                 }, 3000);
             } else {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(result.error || 'Submission failed');
             }
+                throw new Error(result.error || 'Submission failed');
+            }
+            
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Error submitting post:', error);
             
             // Show error message
-            document.getElementById('errorText').textContent = error.message;
+            document.getElementById('errorText').textContent = error.message || 'An error occurred while submitting the post';
             errorMessage.classList.remove('hidden');
         } finally {
             // Reset button state
