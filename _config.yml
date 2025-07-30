@@ -23,3 +23,12 @@ defaults:
       type: 'topics'
     values:
       layout: 'topic'
+
+# Exclude image files from processing
+exclude:
+  - "**/*.png"
+  - "**/*.jpg"
+  - "**/*.jpeg"
+  - "**/*.gif"
+  - "**/*.svg"
+  - "**/*.webp"

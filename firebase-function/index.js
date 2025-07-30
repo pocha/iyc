@@ -80,30 +80,9 @@ ${description}
 
         // Add image to post content
         postContent += `<p>
-![${fileName}](/${imagePath})
+![${fileName}](${process.env.BASE_PATH || ''}/${imagePath})
 </p>
 `
-      } else {
-        // For non-image files, create a download link
-        const fileFileName = `${dateStr}-${slug}-${fileName}`
-        const filePath = `${postDirPath}/${fileFileName}`
-
-        // Create the file
-        await octokit.repos.createOrUpdateFileContents({
-          owner: GITHUB_OWNER,
-          repo: GITHUB_REPO,
-          path: filePath,
-          message: `Add file for post: ${title}`,
-          content: fileContent, // Base64 content
-          branch: GITHUB_BRANCH,
-        })
-
-        // Add download link to post content
-        postContent += `<p>
-[Download ${fileName}](/${filePath})
-</p>
-`
-      }
     }
 
     // Create the blog.md file in the post directory
@@ -245,6 +224,15 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
 
           // Convert file buffer to base64 if file exists
           let fileBase64 = null
+          // Validate that file is an image if file exists
+          if (fileData && fileName && fileType && !fileType.startsWith("image/")) {
+            res.status(400).json({
+              success: false,
+              error: "Only image files are allowed for attachments."
+            })
+            return
+          }
+          
           if (fileData && fileName && fileType) {
             fileBase64 = fileData.toString("base64")
           }
@@ -485,7 +473,7 @@ ${comment}
               branch: GITHUB_BRANCH,
             })
 
-            imageUrl = `/_posts/${postSlug}/${imageFileName}`
+            imageUrl = `${process.env.BASE_PATH}/_posts/${postSlug}/${imageFileName}`
             commentContent += `
 ![Comment Image](${imageUrl})
 `
