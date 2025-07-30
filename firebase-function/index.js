@@ -78,7 +78,7 @@ ${description}
 
       // Add image to post content
       postContent += `<p>
-![${fileName}](https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${imagePath})
+![${fileName}](${process.env.BASE_PATH}/${imagePath})
 </p>
 `
     }
@@ -471,7 +471,7 @@ ${comment}
               branch: GITHUB_BRANCH,
             })
 
-            imageUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/_posts/${postSlug}/${imageFileName}`
+            imageUrl = `${process.env.BASE_PATH}/_posts/${postSlug}/${imageFileName}`
             commentContent += `
 ![Comment Image](${imageUrl})
 `
