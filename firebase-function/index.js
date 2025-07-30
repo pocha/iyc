@@ -61,26 +61,24 @@ ${description}
 `
 
     // Only add file section if file exists
-    if (fileName && fileContent && fileType) {
-      // If it's an image, embed it in the post
-      if (fileType.startsWith("image/")) {
-        // Save image to blog folder
-        const imageFileName = `${dateStr}-${slug}-${fileName}`
-        const imagePath = `${postDirPath}/${imageFileName}`
+    if (fileName && fileContent && fileType && fileType.startsWith("image/")) {
+      // Save image to blog folder
+      const imageFileName = `${dateStr}-${slug}-${fileName}`
+      const imagePath = `${postDirPath}/${imageFileName}`
 
-        // Create the image file
-        await octokit.repos.createOrUpdateFileContents({
-          owner: GITHUB_OWNER,
-          repo: GITHUB_REPO,
-          path: imagePath,
-          message: `Add image for post: ${title}`,
-          content: fileContent, // Base64 content
-          branch: GITHUB_BRANCH,
-        })
+      // Create the image file
+      await octokit.repos.createOrUpdateFileContents({
+        owner: GITHUB_OWNER,
+        repo: GITHUB_REPO,
+        path: imagePath,
+        message: `Add image for post: ${title}`,
+        content: fileContent, // Base64 content
+        branch: GITHUB_BRANCH,
+      })
 
-        // Add image to post content
-        postContent += `<p>
-![${fileName}](${process.env.BASE_PATH || ''}/${imagePath})
+      // Add image to post content
+      postContent += `<p>
+![${fileName}](${process.env.BASE_PATH || ""}/${imagePath})
 </p>
 `
     }
@@ -228,11 +226,11 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
           if (fileData && fileName && fileType && !fileType.startsWith("image/")) {
             res.status(400).json({
               success: false,
-              error: "Only image files are allowed for attachments."
+              error: "Only image files are allowed for attachments.",
             })
             return
           }
-          
+
           if (fileData && fileName && fileType) {
             fileBase64 = fileData.toString("base64")
           }
