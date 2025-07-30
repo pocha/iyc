@@ -26,7 +26,7 @@ const octokit = new Octokit({
   auth: GITHUB_TOKEN,
 })
 
-// Function to create Jekyll post
+// Function to create Jekyll post in new directory structure
 async function createJekyllPost(title, description, fileName, fileContent, fileType) {
   try {
     const now = new Date()
@@ -41,9 +41,10 @@ async function createJekyllPost(title, description, fileName, fileContent, fileT
       .replace(/-+/g, "-")
       .trim("-")
 
-    // Jekyll post filename format: YYYY-MM-DD-title.md
-    const postFileName = `${dateStr}-${slug}.md`
-    const postPath = `_posts/${postFileName}`
+    // Create directory name for the blog post
+    const postDirName = `${dateStr}-${slug}`
+    const postDirPath = `_posts/${postDirName}`
+    const blogFilePath = `${postDirPath}/blog.md`
 
     // Create Jekyll front matter and content
     let postContent = `---
@@ -79,7 +80,7 @@ ${description}
 
         // Add image to post content
         postContent += `<p>
-![${fileName}](${process.env.BASE_PATH}/assets/images/submissions/${imageFileName})
+![${fileName}](/assets/images/submissions/${imageFileName})
 </p>
 `
       } else {
@@ -99,18 +100,18 @@ ${description}
 
         // Add download link to post content
         postContent += `<p>
-[Download ${fileName}](${process.env.BASE_PATH}/assets/files/submissions/${fileFileName})
+[Download ${fileName}](/assets/files/submissions/${fileFileName})
 </p>
 `
       }
     }
 
-    // Create the Jekyll post
+    // Create the blog.md file in the post directory
     const response = await octokit.repos.createOrUpdateFileContents({
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
-      path: postPath,
-      message: `Add new post: ${title}`,
+      path: blogFilePath,
+      message: `Add new blog post: ${title}`,
       content: Buffer.from(postContent).toString("base64"),
       branch: GITHUB_BRANCH,
     })
@@ -251,7 +252,6 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
           // Create Jekyll post on GitHub
           const jekyllResult = await createJekyllPost(title, description, fileName, fileBase64, fileType)
 
-          // Log successful submission
           console.log(
             `Form submitted and Jekyll post created - ID: ${submissionId}, Title: ${title}, Post URL: ${jekyllResult.postUrl}`
           )
@@ -342,6 +342,236 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       }
     } catch (error) {
       console.error("Unexpected error:", error)
+      res.status(500).json({
+        success: false,
+        error: "Unexpected server error occurred.",
+      })
+    }
+  })
+})
+
+// Comment submission handler
+exports.submitComment = functions.region("asia-south1").https.onRequest((req, res) => {
+  return corsHandler(req, res, async () => {
+    // Handle preflight OPTIONS request
+    if (req.method === "OPTIONS") {
+      res.status(200).send()
+      return
+    }
+
+    // Only allow POST requests
+    if (req.method !== "POST") {
+      res.status(405).json({
+        success: false,
+        error: "Method not allowed. Only POST requests are accepted.",
+      })
+      return
+    }
+
+    try {
+      // Check GitHub configuration
+      if (!GITHUB_TOKEN || !GITHUB_OWNER || !GITHUB_REPO) {
+        res.status(500).json({
+          success: false,
+          error: "GitHub configuration is missing.",
+        })
+        return
+      }
+
+      // Check if request has multipart content-type
+      const contentType = req.headers["content-type"] || ""
+      if (!contentType.includes("multipart/form-data")) {
+        res.status(400).json({
+          success: false,
+          error: "Invalid content type. Expected multipart/form-data.",
+        })
+        return
+      }
+
+      // Parse multipart form data using Busboy
+      const busboyInstance = busboy({
+        headers: req.headers,
+        limits: {
+          fileSize: 5 * 1024 * 1024, // 5MB limit for comments
+          files: 1,
+          fields: 10,
+        },
+      })
+
+      const fields = {}
+      let fileData = null
+      let fileName = null
+      let fileType = null
+      let hasFinished = false
+
+      // Handle form fields
+      busboyInstance.on("field", (fieldname, val) => {
+        console.log(`Comment field received: ${fieldname} = ${val}`)
+        fields[fieldname] = val
+      })
+
+      // Handle file uploads
+      busboyInstance.on("file", (fieldname, file, info) => {
+        console.log(`Comment file received: ${fieldname}, filename: ${info.filename}, mimetype: ${info.mimeType}`)
+
+        if (fieldname === "image" && info.filename && info.filename.trim() !== "") {
+          fileName = info.filename
+          fileType = info.mimeType
+          const chunks = []
+
+          file.on("data", (chunk) => {
+            chunks.push(chunk)
+          })
+
+          file.on("end", () => {
+            if (chunks.length > 0) {
+              fileData = Buffer.concat(chunks)
+              console.log(`Comment file data received: ${fileData.length} bytes`)
+            }
+          })
+        } else {
+          console.log("Skipping empty comment file field")
+          file.resume()
+        }
+      })
+
+      // Handle completion
+      busboyInstance.on("finish", async () => {
+        if (hasFinished) return
+        hasFinished = true
+
+        console.log("Comment busboy finished parsing")
+        console.log("Comment fields received:", Object.keys(fields))
+
+        try {
+          const { postSlug, userName, comment } = fields
+
+          // Validate required fields
+          if (!postSlug || !userName || !comment) {
+            res.status(400).json({
+              success: false,
+              error: "Post slug, user name, and comment are required fields.",
+            })
+            return
+          }
+
+          // Generate timestamp for comment
+          const now = new Date()
+          const timestamp = now.toISOString()
+          const commentId = uuidv4().substring(0, 8)
+
+          // Create comment content
+          let commentContent = `---
+author: ${userName}
+date: ${timestamp}
+---
+
+${comment}
+`
+
+          // Handle image attachment if present
+          let imageUrl = ""
+          if (fileData && fileName && fileType && fileType.startsWith("image/")) {
+            const imageFileName = `${postSlug}-comment-${commentId}-${fileName}`
+            const imagePath = `assets/images/comments/${imageFileName}`
+
+            // Upload image to GitHub
+            await octokit.repos.createOrUpdateFileContents({
+              owner: GITHUB_OWNER,
+              repo: GITHUB_REPO,
+              path: imagePath,
+              message: `Add comment image for post: ${postSlug}`,
+              content: fileData.toString("base64"),
+              branch: GITHUB_BRANCH,
+            })
+
+            imageUrl = `/assets/images/comments/${imageFileName}`
+            commentContent += `
+![Comment Image](${imageUrl})
+`
+          }
+
+          // Create comment file in the post directory
+          const commentFileName = `comment-${commentId}.md`
+          const commentPath = `_posts/${postSlug}/${commentFileName}`
+
+          await octokit.repos.createOrUpdateFileContents({
+            owner: GITHUB_OWNER,
+            repo: GITHUB_REPO,
+            path: commentPath,
+            message: `Add comment by ${userName} to post: ${postSlug}`,
+            content: Buffer.from(commentContent).toString("base64"),
+            branch: GITHUB_BRANCH,
+          })
+
+          // Send success response
+          res.status(200).json({
+            success: true,
+            message: "Comment submitted successfully!",
+            data: {
+              commentId: commentId,
+              postSlug: postSlug,
+              userName: userName,
+              comment: comment,
+              imageUrl: imageUrl,
+              submittedAt: timestamp,
+            },
+          })
+        } catch (error) {
+          console.error("Error processing comment submission:", error)
+          res.status(500).json({
+            success: false,
+            error: "Error creating comment: " + error.message,
+          })
+        }
+      })
+
+      // Handle errors
+      busboyInstance.on("error", (error) => {
+        if (hasFinished) return
+        hasFinished = true
+
+        console.error("Comment busboy error:", error)
+        res.status(400).json({
+          success: false,
+          error: "Comment form parsing error: " + error.message,
+        })
+      })
+
+      // Set timeout
+      const timeout = setTimeout(() => {
+        if (!hasFinished) {
+          hasFinished = true
+          console.error("Comment busboy timeout")
+          res.status(408).json({
+            success: false,
+            error: "Comment form parsing timeout. Please try again.",
+          })
+        }
+      }, 30000)
+
+      busboyInstance.on("finish", () => {
+        clearTimeout(timeout)
+      })
+
+      busboyInstance.on("error", () => {
+        clearTimeout(timeout)
+      })
+
+      // Start parsing
+      if (req.rawBody) {
+        busboyInstance.end(req.rawBody)
+      } else {
+        let body = Buffer.alloc(0)
+        req.on("data", (chunk) => {
+          body = Buffer.concat([body, chunk])
+        })
+        req.on("end", () => {
+          busboyInstance.end(body)
+        })
+      }
+    } catch (error) {
+      console.error("Unexpected comment error:", error)
       res.status(500).json({
         success: false,
         error: "Unexpected server error occurred.",
