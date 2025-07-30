@@ -83,10 +83,6 @@ ${description}
 ![${fileName}](/${imagePath})
 </p>
 `
-        postContent += `<p>
-![${fileName}](/assets/images/submissions/${imageFileName})
-</p>
-`
       } else {
         // For non-image files, create a download link
         const fileFileName = `${dateStr}-${slug}-${fileName}`
@@ -105,10 +101,6 @@ ${description}
         // Add download link to post content
         postContent += `<p>
 [Download ${fileName}](/${filePath})
-</p>
-`
-        postContent += `<p>
-[Download ${fileName}](/assets/files/submissions/${fileFileName})
 </p>
 `
       }
