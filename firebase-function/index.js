@@ -446,10 +446,9 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
           const commentId = uuidv4().substring(0, 8)
 
           // Create comment content
----
+          let commentContent = `---
 date: ${timestamp}
 ---
-
 
 ${comment}
 `
@@ -498,8 +497,6 @@ ${comment}
               postSlug: postSlug,
               comment: comment,
               imageUrl: imageUrl,
-              submittedAt: timestamp,
-            },
               submittedAt: timestamp,
             },
           })
