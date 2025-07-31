@@ -173,36 +173,78 @@ ${description}
 
 `
 
-    // Only add file section if file exists
+    // Prepare files for single commit
+    const filesToCreate = []
+    
+    // Always add the blog.md file
+    filesToCreate.push({
+      path: blogFilePath,
+      content: Buffer.from(postContent).toString("base64")
+    })
+
+    // Only add image file if it exists
     if (fileName && fileContent && fileType && fileType.startsWith("image/")) {
-      // Save image to blog folder
       const imageFileName = `${dateStr}-${slug}-${fileName}`
       const imagePath = `${postDirPath}/${imageFileName}`
-
-      // Create the image file
-      await octokit.repos.createOrUpdateFileContents({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        path: imagePath,
-        message: `Add image for post: ${title}`,
-        content: fileContent, // Base64 content
-        branch: GITHUB_BRANCH,
-      })
-
-      // Add image to post content
+      
+      // Add image reference to post content
       postContent += `
 ![${fileName}](https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${imagePath}?raw=true)
 `
+      
+      // Update the blog.md content with image reference
+      filesToCreate[0].content = Buffer.from(postContent).toString("base64")
+      
+      // Add image file to the commit
+      filesToCreate.push({
+        path: imagePath,
+        content: fileContent // Already base64
+      })
     }
 
-    // Create the blog.md file in the post directory
-    const response = await octokit.repos.createOrUpdateFileContents({
+    // Get the latest commit SHA
+    const { data: refData } = await octokit.git.getRef({
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
-      path: blogFilePath,
+      ref: `heads/${GITHUB_BRANCH}`
+    })
+    const latestCommitSha = refData.object.sha
+
+    // Get the base tree
+    const { data: baseTree } = await octokit.git.getTree({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      tree_sha: latestCommitSha
+    })
+
+    // Create tree with all files
+    const { data: newTree } = await octokit.git.createTree({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      base_tree: baseTree.sha,
+      tree: filesToCreate.map(file => ({
+        path: file.path,
+        mode: '100644',
+        type: 'blob',
+        content: Buffer.from(file.content, 'base64').toString()
+      }))
+    })
+
+    // Create single commit
+    const { data: newCommit } = await octokit.git.createCommit({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
       message: `Add new blog post: ${title}`,
-      content: Buffer.from(postContent).toString("base64"),
-      branch: GITHUB_BRANCH,
+      tree: newTree.sha,
+      parents: [latestCommitSha]
+    })
+
+    // Update the reference
+    await octokit.git.updateRef({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      ref: `heads/${GITHUB_BRANCH}`,
+      sha: newCommit.sha
     })
 
     return {
@@ -211,7 +253,7 @@ ${description}
         2,
         "0"
       )}/${String(now.getDate()).padStart(2, "0")}/${slug}.html`,
-      githubUrl: response.data.content.html_url,
+      githubUrl: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/commit/${newCommit.sha}`,
     }
   } catch (error) {
     console.error("Error creating Jekyll post:", error)
