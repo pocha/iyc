@@ -21,7 +21,7 @@ const octokit = new Octokit({
 
 // CORS configuration
 const corsHandler = cors({
-  origin: ["http://20.42.15.153:4001", "http://localhost:4000", "https://pocha.github.io"],
+  origin: ["http://20.42.15.153:4001", "https://pocha.github.io"],
   methods: ["GET", "POST", "OPTIONS"],
 })
 
@@ -242,16 +242,15 @@ async function createJekyllPost(title, description, fileName, fileContent, fileT
     // Create directory name for the blog post
     const postDirName = `${dateStr}-${slug}`
     const postDirPath = `_posts/${postDirName}`
-    const blogFilePath = `${postDirPath}/blog.md`
+    const blogFilePath = `${postDirPath}/index.md`
 
     // Create Jekyll front matter and content
     let postContent = `---
 layout: post
 title: "${title}"
 date: ${timeStr}
-categories: submissions
-tags: [user-submission]
-author: User Submission
+author: Anonymous
+slug: ${slug}
 ---
 
 ${description}
@@ -426,7 +425,7 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
       // Generate timestamp for comment
       const now = new Date()
       const timestamp = now.toISOString()
-      const commentId = uuidv4().substring(0, 8)
+      const timeStr = now.toISOString()
 
       // Create comment content
       let commentContent = `---
@@ -441,7 +440,7 @@ ${comment}
 
       // Handle image attachment if present
       if (fileData && fileName && fileType && fileType.startsWith("image/")) {
-        const imageFileName = `${postSlug}-comment-${commentId}-${fileName}`
+        const imageFileName = `comment-${timeStr}-${fileName}`
         const imagePath = `_posts/${postSlug}/${imageFileName}`
 
         // Add image reference to comment content
@@ -459,8 +458,7 @@ ${comment}
       }
 
       // Create comment file in the post directory
-      const commentFileName = `comment-${commentId}.md`
-      const commentPath = `_posts/${postSlug}/${commentFileName}`
+      const commentPath = `_posts/${postSlug}/comment-${timeStr}.md`
 
       // Add comment file to the commit
       filesToCreate.push({
@@ -477,7 +475,6 @@ ${comment}
         success: true,
         message: "Comment submitted successfully!",
         data: {
-          commentId: commentId,
           postSlug: postSlug,
           comment: comment,
           githubUrl: result.githubUrl,
