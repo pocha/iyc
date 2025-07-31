@@ -429,13 +429,13 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
         console.log("Comment fields received:", Object.keys(fields))
 
         try {
-          const { postSlug, userName, comment } = fields
+          const { postSlug, comment } = fields
 
           // Validate required fields
-          if (!postSlug || !userName || !comment) {
+          if (!postSlug || !comment) {
             res.status(400).json({
               success: false,
-              error: "Post slug, user name, and comment are required fields.",
+              error: "Post slug and comment are required fields.",
             })
             return
           }
@@ -446,10 +446,10 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
           const commentId = uuidv4().substring(0, 8)
 
           // Create comment content
-          let commentContent = `---
-author: ${userName}
+---
 date: ${timestamp}
 ---
+
 
 ${comment}
 `
@@ -496,9 +496,10 @@ ${comment}
             data: {
               commentId: commentId,
               postSlug: postSlug,
-              userName: userName,
               comment: comment,
               imageUrl: imageUrl,
+              submittedAt: timestamp,
+            },
               submittedAt: timestamp,
             },
           })
