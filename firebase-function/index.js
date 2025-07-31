@@ -255,7 +255,7 @@ ${description}
       // Update the blog.md content with image reference
       filesToCreate[0].content = postContent
 
-      // Add image file to the commit - convert raw binary data to base64
+        content: fileContent.toString("base64"),
       filesToCreate.push({
         path: imagePath,
         content: Buffer.from(fileContent).toString("base64"),
