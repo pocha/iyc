@@ -139,7 +139,67 @@ const parseMultipartData = (req, options = {}) => {
   })
 }
 
-// Function to create Jekyll post
+// Generic function to create single commit with multiple files
+async function createSingleCommit(files, commitMessage) {
+  try {
+    // Get the latest commit SHA
+    const { data: refData } = await octokit.git.getRef({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      ref: `heads/${GITHUB_BRANCH}`
+    })
+    const latestCommitSha = refData.object.sha
+
+    // Get the base tree
+    const { data: baseTree } = await octokit.git.getTree({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      tree_sha: latestCommitSha
+    })
+
+    // Create tree with all files
+    const { data: newTree } = await octokit.git.createTree({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      base_tree: baseTree.sha,
+      tree: files.map(file => ({
+        path: file.path,
+        mode: '100644',
+        type: 'blob',
+        content: file.content,
+        encoding: 'base64'
+      }))
+    })
+
+    // Create single commit
+    const { data: newCommit } = await octokit.git.createCommit({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      message: commitMessage,
+      tree: newTree.sha,
+      parents: [latestCommitSha]
+    })
+
+    // Update the reference
+    await octokit.git.updateRef({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      ref: `heads/${GITHUB_BRANCH}`,
+      sha: newCommit.sha
+    })
+
+    return {
+      success: true,
+      commitSha: newCommit.sha,
+      githubUrl: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/commit/${newCommit.sha}`
+    }
+  } catch (error) {
+    console.error("Error creating single commit:", error)
+    throw error
+  }
+}
+
+// Function to create Jekyll post using single commit
 async function createJekyllPost(title, description, fileName, fileContent, fileType) {
   try {
     const now = new Date()
@@ -181,7 +241,6 @@ ${description}
       path: blogFilePath,
       content: Buffer.from(postContent).toString("base64")
     })
-
     // Only add image file if it exists
     if (fileName && fileContent && fileType && fileType.startsWith("image/")) {
       const imageFileName = `${dateStr}-${slug}-${fileName}`
@@ -195,57 +254,15 @@ ${description}
       // Update the blog.md content with image reference
       filesToCreate[0].content = Buffer.from(postContent).toString("base64")
       
-      // Add image file to the commit
+      // Add image file to the commit - convert raw binary data to base64
       filesToCreate.push({
         path: imagePath,
-        content: fileContent // Already base64
+        content: fileContent.toString("base64")
       })
     }
 
-    // Get the latest commit SHA
-    const { data: refData } = await octokit.git.getRef({
-      owner: GITHUB_OWNER,
-      repo: GITHUB_REPO,
-      ref: `heads/${GITHUB_BRANCH}`
-    })
-    const latestCommitSha = refData.object.sha
-
-    // Get the base tree
-    const { data: baseTree } = await octokit.git.getTree({
-      owner: GITHUB_OWNER,
-      repo: GITHUB_REPO,
-      tree_sha: latestCommitSha
-    })
-
-    // Create tree with all files
-    const { data: newTree } = await octokit.git.createTree({
-      owner: GITHUB_OWNER,
-      repo: GITHUB_REPO,
-      base_tree: baseTree.sha,
-      tree: filesToCreate.map(file => ({
-        path: file.path,
-        mode: '100644',
-        type: 'blob',
-        content: Buffer.from(file.content, 'base64').toString()
-      }))
-    })
-
-    // Create single commit
-    const { data: newCommit } = await octokit.git.createCommit({
-      owner: GITHUB_OWNER,
-      repo: GITHUB_REPO,
-      message: `Add new blog post: ${title}`,
-      tree: newTree.sha,
-      parents: [latestCommitSha]
-    })
-
-    // Update the reference
-    await octokit.git.updateRef({
-      owner: GITHUB_OWNER,
-      repo: GITHUB_REPO,
-      ref: `heads/${GITHUB_BRANCH}`,
-      sha: newCommit.sha
-    })
+    // Use the generic single commit function
+    const result = await createSingleCommit(filesToCreate, `Add new blog post: ${title}`)
 
     return {
       success: true,
@@ -253,7 +270,7 @@ ${description}
         2,
         "0"
       )}/${String(now.getDate()).padStart(2, "0")}/${slug}.html`,
-      githubUrl: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/commit/${newCommit.sha}`,
+      githubUrl: result.githubUrl,
     }
   } catch (error) {
     console.error("Error creating Jekyll post:", error)
@@ -261,7 +278,7 @@ ${description}
   }
 }
 
-// Submit form function (for creating blog posts)
+// Submit form function (for creating blog posts) - refactored to use single commit
 exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) => {
   return corsHandler(req, res, async () => {
     // Handle preflight OPTIONS request
@@ -308,81 +325,25 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
         return
       }
 
-      // Generate unique ID for this submission
-      const submissionId = uuidv4()
-      const timestamp = admin.firestore.Timestamp.now()
-
-      // Create slug from title
-      const slug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .trim("-")
-
-      // Create date string for Jekyll post naming
-      const now = new Date()
-      const dateString = now.toISOString().split("T")[0] // YYYY-MM-DD format
-      const postSlug = `${dateString}-${slug}`
-
-      // Create post directory path
-      const postDir = `_posts/${postSlug}`
-
-      // Create blog post content
-      let postContent = `---
-layout: post
-title: "${title}"
-date: ${now.toISOString()}
-categories: submissions
-tags: [user-submission]
-author: User Submission
----
-
-${description}
-`
-
-      // Handle image attachment if present
-      if (fileData && fileName && fileType.startsWith("image/")) {
-        const imageFileName = `${postSlug}-${fileName}`
-        const imagePath = `${postDir}/${imageFileName}`
-
-        // Upload image to GitHub
-        await octokit.repos.createOrUpdateFileContents({
-          owner: GITHUB_OWNER,
-          repo: GITHUB_REPO,
-          path: imagePath,
-          message: `Add image for blog post: ${title}`,
-          content: fileData.toString("base64"),
-          branch: GITHUB_BRANCH,
-        })
-
-        // Add image reference to post content
-        const imageUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${imagePath}?raw=true`
-        postContent += `
-![${fileName}](${imageUrl})
-`
+      // Convert file data to base64 if present
+      let base64FileContent = null
+      if (fileData && fileName && fileType && fileType.startsWith("image/")) {
+        base64FileContent = fileData.toString("base64")
       }
 
-      // Create blog post file
-      const blogPath = `${postDir}/blog.md`
-      await octokit.repos.createOrUpdateFileContents({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        path: blogPath,
-        message: `Add new blog post: ${title}`,
-        content: Buffer.from(postContent).toString("base64"),
-        branch: GITHUB_BRANCH,
-      })
+      // Use the createJekyllPost function - pass raw fileData for images
+      const result = await createJekyllPost(title, description, fileName, fileData, fileType)
 
       // Send success response
       res.status(200).json({
         success: true,
         message: "Blog post submitted successfully!",
         data: {
-          postSlug: postSlug,
           title: title,
           description: description,
-          submittedAt: now.toISOString(),
+          postUrl: result.postUrl,
+          githubUrl: result.githubUrl,
+          submittedAt: new Date().toISOString(),
         },
       })
     } catch (error) {
@@ -395,7 +356,7 @@ ${description}
   })
 })
 
-// Submit comment function (for adding comments to blog posts)
+// Submit comment function (for adding comments to blog posts) - refactored to use single commit
 exports.submitComment = functions.region("asia-south1").https.onRequest((req, res) => {
   return corsHandler(req, res, async () => {
     // Handle preflight OPTIONS request
@@ -454,40 +415,39 @@ date: ${timestamp}
 ${comment}
 `
 
+      // Prepare files for single commit
+      const filesToCreate = []
+
       // Handle image attachment if present
-      let imageUrl = ""
-      if (fileData && fileName && fileType) {
+      if (fileData && fileName && fileType && fileType.startsWith("image/")) {
         const imageFileName = `${postSlug}-comment-${commentId}-${fileName}`
         const imagePath = `_posts/${postSlug}/${imageFileName}`
 
-        // Upload image to GitHub
-        await octokit.repos.createOrUpdateFileContents({
-          owner: GITHUB_OWNER,
-          repo: GITHUB_REPO,
-          path: imagePath,
-          message: `Add comment image for post: ${postSlug}`,
-          content: fileData.toString("base64"),
-          branch: GITHUB_BRANCH,
-        })
-
-        imageUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/_posts/${postSlug}/${imageFileName}?raw=true`
+        // Add image reference to comment content
+        const imageUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/_posts/${postSlug}/${imageFileName}?raw=true`
         commentContent += `
 ![Comment Image](${imageUrl})
 `
+
+        // Add image file to the commit
+        filesToCreate.push({
+          path: imagePath,
+          content: fileData.toString("base64")
+        })
       }
 
       // Create comment file in the post directory
       const commentFileName = `comment-${commentId}.md`
       const commentPath = `_posts/${postSlug}/${commentFileName}`
 
-      await octokit.repos.createOrUpdateFileContents({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
+      // Add comment file to the commit
+      filesToCreate.push({
         path: commentPath,
-        message: `Add comment to post: ${postSlug}`,
-        content: Buffer.from(commentContent).toString("base64"),
-        branch: GITHUB_BRANCH,
+        content: Buffer.from(commentContent).toString("base64")
       })
+
+      // Use the generic single commit function
+      const result = await createSingleCommit(filesToCreate, `Add comment to post: ${postSlug}`)
 
       // Send success response
       res.status(200).json({
@@ -497,7 +457,7 @@ ${comment}
           commentId: commentId,
           postSlug: postSlug,
           comment: comment,
-          imageUrl: imageUrl,
+          githubUrl: result.githubUrl,
           submittedAt: timestamp,
         },
       })
