@@ -453,7 +453,7 @@ ${comment}
         // Add image file to the commit
         filesToCreate.push({
           path: imagePath,
-          content: Buffer.from(fileData).toString("base64"),
+          content: fileData,
           encoding: "base64",
         })
       }
