@@ -157,18 +157,43 @@ async function createSingleCommit(files, commitMessage) {
       tree_sha: latestCommitSha,
     })
 
+    // Process files and create blobs for binary files
+    const treeItems = []
+    
+    for (const file of files) {
+      if (file.encoding === 'base64') {
+        // For binary files (images), create a blob first
+        const { data: blob } = await octokit.git.createBlob({
+          owner: GITHUB_OWNER,
+          repo: GITHUB_REPO,
+          content: file.content,
+          encoding: 'base64'
+        })
+        
+        treeItems.push({
+          path: file.path,
+          mode: "100644",
+          type: "blob",
+          sha: blob.sha
+        })
+      } else {
+        // For text files, use content directly
+        treeItems.push({
+          path: file.path,
+          mode: "100644",
+          type: "blob",
+          content: file.content,
+          encoding: file.encoding || 'utf-8'
+        })
+      }
+    }
+
     // Create tree with all files
     const { data: newTree } = await octokit.git.createTree({
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
       base_tree: baseTree.sha,
-      tree: files.map((file) => ({
-        path: file.path,
-        mode: "100644",
-        type: "blob",
-        content: file.content,
-        encoding: file.encoding,
-      })),
+      tree: treeItems
     })
 
     // Create single commit
