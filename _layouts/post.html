@@ -51,7 +51,7 @@ layout: default
       
       <!-- Display Comments -->
       <div class="space-y-4 mb-6">
-        {% assign post_slug = page.slug | default: page.title | slugify %}
+        {% assign post_slug = page.date | date: "%Y-%m-%d" | append: "-" | append: page.slug %}
         {% assign comment_files = site.static_files | where_exp: "file", "file.path contains post_slug" | where_exp: "file", "file.path contains 'comment-'" | where_exp: "file", "file.extname == '.md'" %}
         
         {% if comment_files.size > 0 %}
