@@ -159,22 +159,22 @@ async function createSingleCommit(files, commitMessage) {
 
     // Process files and create blobs for binary files
     const treeItems = []
-    
+
     for (const file of files) {
-      if (file.encoding === 'base64') {
+      if (file.encoding === "base64") {
         // For binary files (images), create a blob first
         const { data: blob } = await octokit.git.createBlob({
           owner: GITHUB_OWNER,
           repo: GITHUB_REPO,
           content: file.content,
-          encoding: 'base64'
+          encoding: "base64",
         })
-        
+
         treeItems.push({
           path: file.path,
           mode: "100644",
           type: "blob",
-          sha: blob.sha
+          sha: blob.sha,
         })
       } else {
         // For text files, use content directly
@@ -183,7 +183,7 @@ async function createSingleCommit(files, commitMessage) {
           mode: "100644",
           type: "blob",
           content: file.content,
-          encoding: file.encoding || 'utf-8'
+          encoding: file.encoding || "utf-8",
         })
       }
     }
@@ -193,7 +193,7 @@ async function createSingleCommit(files, commitMessage) {
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
       base_tree: baseTree.sha,
-      tree: treeItems
+      tree: treeItems,
     })
 
     // Create single commit
@@ -280,12 +280,12 @@ ${description}
       // Update the blog.md content with image reference
       filesToCreate[0].content = postContent
 
-        content: fileContent.toString("base64"),
-      filesToCreate.push({
-        path: imagePath,
-        content: Buffer.from(fileContent).toString("base64"),
-        encoding: "base64",
-      })
+      content: fileContent.toString("base64"),
+        filesToCreate.push({
+          path: imagePath,
+          content: Buffer.from(fileContent).toString("base64"),
+          encoding: "base64",
+        })
     }
 
     // Use the generic single commit function
@@ -453,7 +453,7 @@ ${comment}
         // Add image file to the commit
         filesToCreate.push({
           path: imagePath,
-          content: fileData,
+          content: Buffer.from(fileData).toString("base64"),
           encoding: "base64",
         })
       }
