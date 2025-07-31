@@ -146,7 +146,7 @@ async function createSingleCommit(files, commitMessage) {
     const { data: refData } = await octokit.git.getRef({
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
-      ref: `heads/${GITHUB_BRANCH}`
+      ref: `heads/${GITHUB_BRANCH}`,
     })
     const latestCommitSha = refData.object.sha
 
@@ -154,7 +154,7 @@ async function createSingleCommit(files, commitMessage) {
     const { data: baseTree } = await octokit.git.getTree({
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
-      tree_sha: latestCommitSha
+      tree_sha: latestCommitSha,
     })
 
     // Create tree with all files
@@ -162,13 +162,13 @@ async function createSingleCommit(files, commitMessage) {
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
       base_tree: baseTree.sha,
-      tree: files.map(file => ({
+      tree: files.map((file) => ({
         path: file.path,
-        mode: '100644',
-        type: 'blob',
+        mode: "100644",
+        type: "blob",
         content: file.content,
-        encoding: 'base64'
-      }))
+        encoding: file.encoding,
+      })),
     })
 
     // Create single commit
@@ -177,7 +177,7 @@ async function createSingleCommit(files, commitMessage) {
       repo: GITHUB_REPO,
       message: commitMessage,
       tree: newTree.sha,
-      parents: [latestCommitSha]
+      parents: [latestCommitSha],
     })
 
     // Update the reference
@@ -185,13 +185,13 @@ async function createSingleCommit(files, commitMessage) {
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
       ref: `heads/${GITHUB_BRANCH}`,
-      sha: newCommit.sha
+      sha: newCommit.sha,
     })
 
     return {
       success: true,
       commitSha: newCommit.sha,
-      githubUrl: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/commit/${newCommit.sha}`
+      githubUrl: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/commit/${newCommit.sha}`,
     }
   } catch (error) {
     console.error("Error creating single commit:", error)
@@ -235,29 +235,31 @@ ${description}
 
     // Prepare files for single commit
     const filesToCreate = []
-    
+
     // Always add the blog.md file
     filesToCreate.push({
       path: blogFilePath,
-      content: Buffer.from(postContent).toString("base64")
+      content: postContent,
+      encoding: "utf-8",
     })
     // Only add image file if it exists
     if (fileName && fileContent && fileType && fileType.startsWith("image/")) {
       const imageFileName = `${dateStr}-${slug}-${fileName}`
       const imagePath = `${postDirPath}/${imageFileName}`
-      
+
       // Add image reference to post content
       postContent += `
 ![${fileName}](https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${imagePath}?raw=true)
 `
-      
+
       // Update the blog.md content with image reference
-      filesToCreate[0].content = Buffer.from(postContent).toString("base64")
-      
+      filesToCreate[0].content = postContent
+
       // Add image file to the commit - convert raw binary data to base64
       filesToCreate.push({
         path: imagePath,
-        content: fileContent.toString("base64")
+        content: Buffer.from(fileContent).toString("base64"),
+        encoding: "base64",
       })
     }
 
@@ -323,12 +325,6 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
           error: "Title and description are required fields.",
         })
         return
-      }
-
-      // Convert file data to base64 if present
-      let base64FileContent = null
-      if (fileData && fileName && fileType && fileType.startsWith("image/")) {
-        base64FileContent = fileData.toString("base64")
       }
 
       // Use the createJekyllPost function - pass raw fileData for images
@@ -432,7 +428,8 @@ ${comment}
         // Add image file to the commit
         filesToCreate.push({
           path: imagePath,
-          content: fileData.toString("base64")
+          content: Buffer.from(fileData).toString("base64"),
+          encoding: "base64",
         })
       }
 
@@ -443,7 +440,8 @@ ${comment}
       // Add comment file to the commit
       filesToCreate.push({
         path: commentPath,
-        content: Buffer.from(commentContent).toString("base64")
+        content: commentContent,
+        encoding: "utf-8",
       })
 
       // Use the generic single commit function
