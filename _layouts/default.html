@@ -6,35 +6,32 @@
     <title>{{ page.title | default: site.title }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-<style>
-.text-orange-600 {
-color: #e57324 !important;
-}
-@font-face {
-font-family: 'cera-round-pro-bold'; /* Choose a name for your font */
-src: url('{{ site.baseurl }}/assets/font/cera-round-pro-free-font/Demo_fonts/Web_Font/FONTSPRINGDEMO-CeraRoundProBlackRegular.woff') format('woff'); /* Path to WOFF2 file */
-font-weight: normal; /* Optional: define font weight */
-font-style: normal;  /* Optional: define font style */
-}
-@font-face {
-font-family: 'nunito-bold'; /* Nunito Bold */
-src: url('{{ site.baseurl }}/assets/fonts/nunito/Nunito-Variable.ttf') format('truetype');
-font-weight: 700;
-font-style: normal;
-}
-@font-face {
-font-family: 'nunito'; /* Nunito Regular */
-src: url('{{ site.baseurl }}/assets/fonts/nunito/Nunito-Variable.ttf') format('truetype');
-font-weight: 400;
-font-style: normal;
-}
-.prose > p {
-margin-bottom: 1em; /* for better spacing in the blog content */
-}
-.edit-btn {
-display: none;
-}
-</style>
+	<style>
+		.text-orange-600 {
+			color: #e57324 !important;
+		}
+		@font-face {
+			font-family: 'cera-round-pro-bold'; /* Choose a name for your font */
+			src: url('{{ site.baseurl }}/assets/font/cera-round-pro-free-font/Demo_fonts/Web_Font/FONTSPRINGDEMO-CeraRoundProBlackRegular.woff') format('woff'); /* Path to WOFF2 file */
+			font-weight: normal; /* Optional: define font weight */
+			font-style: normal;  /* Optional: define font style */
+		}
+		@font-face {
+			font-family: 'nunito-bold'; /* Nunito Bold */
+			src: url('{{ site.baseurl }}/assets/fonts/nunito/Nunito-Variable.ttf') format('truetype');
+			font-weight: 700;
+			font-style: normal;
+		}
+		@font-face {
+			font-family: 'nunito'; /* Nunito Regular */
+			src: url('{{ site.baseurl }}/assets/fonts/nunito/Nunito-Variable.ttf') format('truetype');
+			font-weight: 400;
+			font-style: normal;
+		}
+		.prose > p {
+			margin-bottom: 1em; /* for better spacing in the blog content */
+		}
+	</style>
 </head>
 <body class="bg-white min-h-screen text-gray-900" style="font-family: nunito">
     <!-- Header -->
@@ -51,10 +48,10 @@ display: none;
                         <h1 class="text-2xl font-bold text-orange-600" style="font-family: cera-round-pro-bold">
                             {{ site.title }}
                         </h1>
-<p class="text-gray-500">
-{{ site.description }}
-</p>
-                </div>
+						<p class="text-gray-500">
+							{{ site.description }}
+						</p>
+                	</div>
                 <nav class="flex items-center">
                     <a href="{{ site.baseurl }}/post/" class="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-all">
                         Post
@@ -75,61 +72,5 @@ display: none;
             <p>&copy; 2025 {{ site.title }}. Built using <a href="https://nonbios.ai">nonbios.ai</a></p>
         </div>
     </footer>
-
-    <!-- Cookie Management System -->
-    <script>
-        // Cookie Management Functions
-        function generateUniqueId() {
-            return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        }
-
-        function setCookie(name, value, days) {
-            const expires = new Date();
-            expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
-            document.cookie = name + '=' + value + ';expires=' + expires.toUTCString() + ';path=/;SameSite=Strict';
-        }
-
-        function getCookie(name) {
-            const nameEQ = name + "=";
-            const ca = document.cookie.split(';');
-            for(let i = 0; i < ca.length; i++) {
-                let c = ca[i];
-                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-            }
-            return null;
-        }
-
-        function getUserId() {
-            let userId = getCookie('forum_user_id');
-            if (!userId) {
-                userId = generateUniqueId();
-                setCookie('forum_user_id', userId, 365); // Set for 1 year
-            }
-            return userId;
-        }
-
-        // Initialize user ID on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            const userId = getUserId();
-            console.log('User ID:', userId);
-            
-            // Show edit buttons for posts owned by current user
-            showEditButtonsForUserPosts(userId);
-        });
-
-        function showEditButtonsForUserPosts(userId) {
-            const editButtons = document.querySelectorAll('.edit-btn');
-            editButtons.forEach(button => {
-                const postAuthorId = button.getAttribute('data-author-id');
-                if (postAuthorId === userId) {
-                    button.style.display = 'inline-block';
-                }
-            });
-        }
-
-        // Make getUserId available globally for forms
-        window.getUserId = getUserId;
-    </script>
 </body>
 </html>
