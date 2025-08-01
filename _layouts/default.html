@@ -17,14 +17,20 @@
 			font-style: normal;  /* Optional: define font style */
 		}
 		@font-face {
-			font-family: 'cera-round-pro'; /* Choose a name for your font */
-			src: url('{{ site.baseurl }}/assets/font/cera-round-pro-free-font/Demo_fonts/Web_Font/FONTSPRINGDEMO-CeraRoundProRegular.woff') format('woff'); /* Path to WOFF2 file */
-			font-weight: normal; /* Optional: define font weight */
-			font-style: normal;  /* Optional: define font style */
+			font-family: 'nunito-bold'; /* Nunito Bold */
+			src: url('{{ site.baseurl }}/assets/fonts/nunito/Nunito-Variable.ttf') format('truetype');
+			font-weight: 700;
+			font-style: normal;
+		}
+		@font-face {
+			font-family: 'nunito'; /* Nunito Regular */
+			src: url('{{ site.baseurl }}/assets/fonts/nunito/Nunito-Variable.ttf') format('truetype');
+			font-weight: 400;
+			font-style: normal;
 		}
 	</style>
 </head>
-<body class="bg-white min-h-screen text-gray-900" style="font-family: cera-round-pro">
+<body class="bg-white min-h-screen text-gray-900" style="font-family: nunito">
     <!-- Header -->
     <header class="border-b border-gray-200 bg-white">
         <div class="container mx-auto px-6 py-4">
