@@ -428,8 +428,8 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
       const timeStr = now.toISOString()
 
       // Generate comment ID and sanitized timestamp for filename
-      const commentId = `comment-${timeStr.replace(/[:.]/g, '-')}`
-      
+      const commentId = `comment-${timeStr.replace(/[:.]/g, "-")}`
+
       // Create comment content in YAML format for Staticman structure
       let commentContent = `_id: ${commentId}
 date: ${timestamp}
@@ -440,7 +440,7 @@ message: ${comment}`
       const filesToCreate = []
 
       // Handle image attachment if present
-      if (fileData && fileName && fileType && fileType.startsWith(image/)) {
+      if (fileData && fileName && fileType && fileType.startsWith("image/")) {
         const imageFileName = `comment-${timeStr}-${fileName}`
         const imagePath = `_posts/${postSlug}/${imageFileName}`
 
