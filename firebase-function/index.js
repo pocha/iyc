@@ -225,7 +225,7 @@ async function createSingleCommit(files, commitMessage) {
 }
 
 // Function to create Jekyll post using single commit
-async function createJekyllPost(title, description, fileName, fileContent, fileType) {
+async function createJekyllPost(title, description, fileName, fileContent, fileType, userCookie) {
   try {
     const now = new Date()
     const dateStr = now.toISOString().split("T")[0] // YYYY-MM-DD format
@@ -251,7 +251,12 @@ title: "${title}"
 date: ${timeStr}
 author: Anonymous
 slug: ${slug}
+user_cookie: ${userCookie || 'anonymous'}
 ---
+
+${description}
+
+`
 
 ${description}
 
@@ -342,8 +347,10 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       // Extract form data
       const { title, description } = fields
 
+      // Extract user cookie from request headers
+      const userCookie = req.headers['x-user-cookie'] || req.headers['cookie']?.match(/userCookie=([^;]+)/)?.[1] || null
+
       // Validate required fields
-      if (!title || !description) {
         res.status(400).json({
           success: false,
           error: "Title and description are required fields.",
@@ -351,8 +358,10 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
         return
       }
 
-      // Use the createJekyllPost function - pass raw fileData for images
-      const result = await createJekyllPost(title, description, fileName, fileData, fileType)
+      // Use the createJekyllPost function - pass raw fileData for images and user cookie
+      const result = await createJekyllPost(title, description, fileName, fileData, fileType, userCookie)
+      // Use the createJekyllPost function - pass raw fileData for images and user cookie
+      const result = await createJekyllPost(title, description, fileName, fileData, fileType, userCookie)
 
       // Send success response
       res.status(200).json({
