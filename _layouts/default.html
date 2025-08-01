@@ -28,6 +28,9 @@
 			font-weight: 400;
 			font-style: normal;
 		}
+		.prose > p {
+			margin-bottom: 1em; /* for better spacing in the blog content */
+		}
 	</style>
 </head>
 <body class="bg-white min-h-screen text-gray-900" style="font-family: nunito">
@@ -50,7 +53,7 @@
 						</p>
                 	</div>
                 <nav class="flex items-center">
-                    <a href="post/" class="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-all">
+                    <a href="{{ site.baseurl }}/post/" class="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-all">
                         Post
                     </a>
                 </nav>
