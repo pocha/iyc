@@ -9,6 +9,7 @@ title: Whats up IYC
     <!-- Recent Topics Section -->
     <div class="divide-y divide-gray-200">
       {% for post in site.posts %}
+        {% unless post.path contains 'comment-' %}
       <!-- Topic {{ forloop.index }} -->
       <div class="p-4 hover:bg-gray-50 transition-colors">
         <div class="flex items-start justify-between">
@@ -63,6 +64,7 @@ title: Whats up IYC
 		-->
         </div>
       </div>
+        {% endunless %}
       {% endfor %} {% if site.posts.size == 0 %}
       <!-- No posts message -->
       <div class="p-8 text-center text-gray-500">

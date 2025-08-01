@@ -52,25 +52,26 @@ layout: default
       <!-- Display Comments -->
       <div class="space-y-4 mb-6">
         {% assign post_slug = page.date | date: "%Y-%m-%d" | append: "-" | append: page.slug %}
-        {% assign comment_files = site.static_files | where_exp: "file", "file.path contains post_slug" | where_exp: "file", "file.path contains 'comment-'" | where_exp: "file", "file.extname == '.md'" %}
+        {% assign post_slug = page.date | date: "%Y-%m-%d" | append: "-" | append: page.slug %}
+        {% assign comments = site.data.comments[post_slug] %}
         
-        {% if comment_files.size > 0 %}
-          {% for comment_file in comment_files %}
-            {% assign comment_content = comment_file.path | split: '/' | last | remove: '.md' %}
-            {% assign comment_data = site.data[comment_content] %}
+        {% if comments.size > 0 %}
+          {% for comment_hash in comments %}
+            {% assign comment = comment_hash[1] %}
             <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
               <div class="flex items-center justify-between mb-2">
-                <span class="font-semibold text-gray-900">{{ comment_data.author | default: "Anonymous" }}</span>
-                <span class="text-sm text-gray-500">{{ comment_data.date | date: "%B %d, %Y at %I:%M %p" }}</span>
+                <span class="font-semibold text-gray-900">{{ comment.name | default: "Anonymous" }}</span>
+                <span class="text-sm text-gray-500">{{ comment.date | date: "%B %d, %Y at %I:%M %p" }}</span>
               </div>
               <div class="text-gray-700">
-                {{ comment_data.content | markdownify }}
+                {{ comment.message }}
               </div>
             </div>
           {% endfor %}
         {% else %}
-          <p class="text-gray-500 italic">No comments yet. Be the first to comment!</p>
+          <p class="text-gray-500 italic">No comments yet. Be the first to comment.</p>
         {% endif %}
+      </div>
       </div>
 
       <!-- Comment Form -->
