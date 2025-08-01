@@ -1,21 +1,14 @@
 const functions = require("firebase-functions")
 const admin = require("firebase-admin")
+const { Octokit } = require("@octokit/rest")
 const cors = require("cors")
 const busboy = require("busboy")
 const { v4: uuidv4 } = require("uuid")
-const { Octokit } = require("@octokit/rest")
 
-// Initialize Firebase Admin
+// Initialize Firebase Admin SDK
 admin.initializeApp()
 
-// Configure CORS to allow requests from any origin
-const corsHandler = cors({
-  origin: ["http://20.42.15.153:4001", "http://localhost:4000", "https://pocha.github.io"],
-  methods: ["GET", "POST", "OPTIONS"],
-  credentials: true,
-})
-
-// GitHub configuration - Set these in Firebase Functions config
+// GitHub configuration
 const GITHUB_TOKEN = functions.config().github?.token || process.env.GITHUB_TOKEN
 const GITHUB_OWNER = functions.config().github?.owner || process.env.GITHUB_OWNER
 const GITHUB_REPO = functions.config().github?.repo || process.env.GITHUB_REPO
@@ -26,7 +19,212 @@ const octokit = new Octokit({
   auth: GITHUB_TOKEN,
 })
 
-// Function to create Jekyll post in new directory structure
+// CORS configuration
+const corsHandler = cors({
+  origin: ["http://20.42.15.153:4001", "https://pocha.github.io"],
+  methods: ["GET", "POST", "OPTIONS"],
+})
+
+// Shared function to parse multipart form data using Busboy
+const parseMultipartData = (req, options = {}) => {
+  return new Promise((resolve, reject) => {
+    const defaultOptions = {
+      fileSize: 10 * 1024 * 1024, // 10MB default
+      files: 1,
+      fields: 10,
+      imageOnly: true, // whether to restrict to images only
+    }
+
+    const config = { ...defaultOptions, ...options }
+
+    // Check if request has multipart content-type
+    const contentType = req.headers["content-type"] || ""
+    if (!contentType.includes("multipart/form-data")) {
+      reject(new Error("Invalid content type. Expected multipart/form-data."))
+      return
+    }
+
+    // Parse multipart form data using Busboy
+    const busboyInstance = busboy({
+      headers: req.headers,
+      limits: {
+        fileSize: config.fileSize,
+        files: config.files,
+        fields: config.fields,
+      },
+    })
+
+    const fields = {}
+    let fileData = null
+    let fileName = null
+    let fileType = null
+    let hasFinished = false
+
+    // Handle form fields
+    busboyInstance.on("field", (fieldname, val) => {
+      console.log(`Field received: ${fieldname} = ${val}`)
+      fields[fieldname] = val
+    })
+
+    // Handle file uploads
+    busboyInstance.on("file", (fieldname, file, info) => {
+      console.log(`File received: ${fieldname}, filename: ${info.filename}, mimetype: ${info.mimeType}`)
+
+      // Only process if filename exists and matches expected field name
+      if (info.filename && info.filename.trim() !== "") {
+        // Check if image-only restriction is enabled
+        if (config.imageOnly && !info.mimeType.startsWith("image/")) {
+          reject(new Error("Only image files are allowed for attachments."))
+          return
+        }
+
+        fileName = info.filename
+        fileType = info.mimeType
+        const chunks = []
+
+        file.on("data", (chunk) => {
+          chunks.push(chunk)
+        })
+
+        file.on("end", () => {
+          if (chunks.length > 0) {
+            fileData = Buffer.concat(chunks)
+            console.log(`File data received: ${fileData.length} bytes`)
+          }
+        })
+      } else {
+        // Skip empty file fields or files without names
+        console.log("Skipping empty file field")
+        file.resume()
+      }
+    })
+
+    // Handle completion
+    busboyInstance.on("finish", async () => {
+      if (hasFinished) return // Prevent double processing
+      hasFinished = true
+
+      console.log("Busboy finished parsing")
+      console.log("Fields received:", Object.keys(fields))
+      console.log("File info:", { fileName, fileType, hasFileData: !!fileData })
+
+      resolve({
+        fields,
+        fileData,
+        fileName,
+        fileType,
+      })
+    })
+
+    // Handle errors
+    busboyInstance.on("error", (error) => {
+      console.error("Busboy error:", error)
+      reject(error)
+    })
+
+    // Pipe the request to busboy
+    // req.pipe(busboyInstance)
+    if (req.rawBody) {
+      busboyInstance.end(req.rawBody)
+    } else {
+      // For Firebase Functions, we need to read the request body
+      let body = Buffer.alloc(0)
+      req.on("data", (chunk) => {
+        body = Buffer.concat([body, chunk])
+      })
+      req.on("end", () => {
+        busboyInstance.end(body)
+      })
+    }
+  })
+}
+
+// Generic function to create single commit with multiple files
+async function createSingleCommit(files, commitMessage) {
+  try {
+    // Get the latest commit SHA
+    const { data: refData } = await octokit.git.getRef({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      ref: `heads/${GITHUB_BRANCH}`,
+    })
+    const latestCommitSha = refData.object.sha
+
+    // Get the base tree
+    const { data: baseTree } = await octokit.git.getTree({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      tree_sha: latestCommitSha,
+    })
+
+    // Process files and create blobs for binary files
+    const treeItems = []
+
+    for (const file of files) {
+      if (file.encoding === "base64") {
+        // For binary files (images), create a blob first
+        const { data: blob } = await octokit.git.createBlob({
+          owner: GITHUB_OWNER,
+          repo: GITHUB_REPO,
+          content: file.content,
+          encoding: "base64",
+        })
+
+        treeItems.push({
+          path: file.path,
+          mode: "100644",
+          type: "blob",
+          sha: blob.sha,
+        })
+      } else {
+        // For text files, use content directly
+        treeItems.push({
+          path: file.path,
+          mode: "100644",
+          type: "blob",
+          content: file.content,
+          encoding: file.encoding || "utf-8",
+        })
+      }
+    }
+
+    // Create tree with all files
+    const { data: newTree } = await octokit.git.createTree({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      base_tree: baseTree.sha,
+      tree: treeItems,
+    })
+
+    // Create single commit
+    const { data: newCommit } = await octokit.git.createCommit({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      message: commitMessage,
+      tree: newTree.sha,
+      parents: [latestCommitSha],
+    })
+
+    // Update the reference
+    await octokit.git.updateRef({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      ref: `heads/${GITHUB_BRANCH}`,
+      sha: newCommit.sha,
+    })
+
+    return {
+      success: true,
+      commitSha: newCommit.sha,
+      githubUrl: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/commit/${newCommit.sha}`,
+    }
+  } catch (error) {
+    console.error("Error creating single commit:", error)
+    throw error
+  }
+}
+
+// Function to create Jekyll post using single commit
 async function createJekyllPost(title, description, fileName, fileContent, fileType) {
   try {
     const now = new Date()
@@ -44,53 +242,53 @@ async function createJekyllPost(title, description, fileName, fileContent, fileT
     // Create directory name for the blog post
     const postDirName = `${dateStr}-${slug}`
     const postDirPath = `_posts/${postDirName}`
-    const blogFilePath = `${postDirPath}/blog.md`
+    const blogFilePath = `${postDirPath}/index.md`
 
     // Create Jekyll front matter and content
     let postContent = `---
 layout: post
 title: "${title}"
 date: ${timeStr}
-categories: submissions
-tags: [user-submission]
-author: User Submission
+author: Anonymous
+slug: ${slug}
 ---
 
 ${description}
 
 `
 
-    // Only add file section if file exists
+    // Prepare files for single commit
+    const filesToCreate = []
+
+    // Always add the blog.md file
+    filesToCreate.push({
+      path: blogFilePath,
+      content: postContent,
+      encoding: "utf-8",
+    })
+    // Only add image file if it exists
     if (fileName && fileContent && fileType && fileType.startsWith("image/")) {
-      // Save image to blog folder
       const imageFileName = `${dateStr}-${slug}-${fileName}`
       const imagePath = `${postDirPath}/${imageFileName}`
 
-      // Create the image file
-      await octokit.repos.createOrUpdateFileContents({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        path: imagePath,
-        message: `Add image for post: ${title}`,
-        content: fileContent, // Base64 content
-        branch: GITHUB_BRANCH,
-      })
-
-      // Add image to post content
+      // Add image reference to post content
       postContent += `
 ![${fileName}](https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${imagePath}?raw=true)
 `
+
+      // Update the blog.md content with image reference
+      filesToCreate[0].content = postContent
+
+      content: fileContent.toString("base64"),
+        filesToCreate.push({
+          path: imagePath,
+          content: Buffer.from(fileContent).toString("base64"),
+          encoding: "base64",
+        })
     }
 
-    // Create the blog.md file in the post directory
-    const response = await octokit.repos.createOrUpdateFileContents({
-      owner: GITHUB_OWNER,
-      repo: GITHUB_REPO,
-      path: blogFilePath,
-      message: `Add new blog post: ${title}`,
-      content: Buffer.from(postContent).toString("base64"),
-      branch: GITHUB_BRANCH,
-    })
+    // Use the generic single commit function
+    const result = await createSingleCommit(filesToCreate, `Add new blog post: ${title}`)
 
     return {
       success: true,
@@ -98,7 +296,7 @@ ${description}
         2,
         "0"
       )}/${String(now.getDate()).padStart(2, "0")}/${slug}.html`,
-      githubUrl: response.data.content.html_url,
+      githubUrl: result.githubUrl,
     }
   } catch (error) {
     console.error("Error creating Jekyll post:", error)
@@ -106,7 +304,7 @@ ${description}
   }
 }
 
-// Main form submission handler
+// Submit form function (for creating blog posts) - refactored to use single commit
 exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) => {
   return corsHandler(req, res, async () => {
     // Handle preflight OPTIONS request
@@ -134,208 +332,51 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
         return
       }
 
-      // Check if request has multipart content-type
-      const contentType = req.headers["content-type"] || ""
-      if (!contentType.includes("multipart/form-data")) {
+      // Parse multipart data with blog post specific options
+      const { fields, fileData, fileName, fileType } = await parseMultipartData(req, {
+        fileSize: 10 * 1024 * 1024, // 10MB limit for blog posts
+        allowedFileField: "image",
+        imageOnly: true,
+      })
+
+      // Extract form data
+      const { title, description } = fields
+
+      // Validate required fields
+      if (!title || !description) {
         res.status(400).json({
           success: false,
-          error: "Invalid content type. Expected multipart/form-data.",
+          error: "Title and description are required fields.",
         })
         return
       }
 
-      // Parse multipart form data using Busboy
-      const busboyInstance = busboy({
-        headers: req.headers,
-        limits: {
-          fileSize: 10 * 1024 * 1024, // 10MB limit
-          files: 1, // Only allow 1 file
-          fields: 10, // Limit number of fields
+      // Use the createJekyllPost function - pass raw fileData for images
+      const result = await createJekyllPost(title, description, fileName, fileData, fileType)
+
+      // Send success response
+      res.status(200).json({
+        success: true,
+        message: "Blog post submitted successfully!",
+        data: {
+          title: title,
+          description: description,
+          postUrl: result.postUrl,
+          githubUrl: result.githubUrl,
+          submittedAt: new Date().toISOString(),
         },
       })
-
-      const fields = {}
-      let fileData = null
-      let fileName = null
-      let fileType = null
-      let hasFinished = false
-
-      // Handle form fields
-      busboyInstance.on("field", (fieldname, val) => {
-        console.log(`Field received: ${fieldname} = ${val}`)
-        fields[fieldname] = val
-      })
-
-      // Handle file uploads
-      busboyInstance.on("file", (fieldname, file, info) => {
-        console.log(`File received: ${fieldname}, filename: ${info.filename}, mimetype: ${info.mimeType}`)
-
-        // Only process if filename exists (not empty file field)
-        if (fieldname === "file" && info.filename && info.filename.trim() !== "") {
-          fileName = info.filename
-          fileType = info.mimeType
-          const chunks = []
-
-          file.on("data", (chunk) => {
-            chunks.push(chunk)
-          })
-
-          file.on("end", () => {
-            if (chunks.length > 0) {
-              fileData = Buffer.concat(chunks)
-              console.log(`File data received: ${fileData.length} bytes`)
-            }
-          })
-        } else {
-          // Skip empty file fields or files without names
-          console.log("Skipping empty file field")
-          file.resume()
-        }
-      })
-
-      // Handle completion
-      busboyInstance.on("finish", async () => {
-        if (hasFinished) return // Prevent double processing
-        hasFinished = true
-
-        console.log("Busboy finished parsing")
-        console.log("Fields received:", Object.keys(fields))
-        console.log("File info:", { fileName, fileType, hasFileData: !!fileData })
-
-        try {
-          // Extract form data
-          const { title, description } = fields
-
-          // Validate required fields
-          if (!title || !description) {
-            res.status(400).json({
-              success: false,
-              error: "Title and description are required fields.",
-            })
-            return
-          }
-
-          // Generate unique ID for this submission
-          const submissionId = uuidv4()
-          const timestamp = admin.firestore.Timestamp.now()
-
-          // Convert file buffer to base64 if file exists
-          let fileBase64 = null
-          // Validate that file is an image if file exists
-          if (fileData && fileName && fileType && !fileType.startsWith("image/")) {
-            res.status(400).json({
-              success: false,
-              error: "Only image files are allowed for attachments.",
-            })
-            return
-          }
-
-          if (fileData && fileName && fileType) {
-            fileBase64 = fileData.toString("base64")
-          }
-
-          // Create Jekyll post on GitHub
-          const jekyllResult = await createJekyllPost(title, description, fileName, fileBase64, fileType)
-
-          console.log(
-            `Form submitted and Jekyll post created - ID: ${submissionId}, Title: ${title}, Post URL: ${jekyllResult.postUrl}`
-          )
-
-          // Send success response
-          res.status(200).json({
-            success: true,
-            message: "Form submitted successfully and Jekyll post created!",
-            data: {
-              id: submissionId,
-              title: title,
-              description: description,
-              fileName: fileName,
-              fileSize: fileData ? fileData.length : 0,
-              submittedAt: timestamp.toDate().toISOString(),
-              postUrl: jekyllResult.postUrl,
-              githubUrl: jekyllResult.githubUrl,
-            },
-          })
-        } catch (error) {
-          console.error("Error processing form submission:", error)
-
-          // More specific error handling
-          if (error.status === 404) {
-            res.status(500).json({
-              success: false,
-              error: "GitHub repository not found. Please check your GitHub configuration.",
-            })
-          } else if (error.status === 401) {
-            res.status(500).json({
-              success: false,
-              error: "GitHub authentication failed. Please check your GitHub token.",
-            })
-          } else {
-            res.status(500).json({
-              success: false,
-              error: "Error creating Jekyll post: " + error.message,
-            })
-          }
-        }
-      })
-
-      // Handle errors
-      busboyInstance.on("error", (error) => {
-        if (hasFinished) return // Don't handle errors after finishing
-        hasFinished = true
-
-        console.error("Busboy error:", error)
-        res.status(400).json({
-          success: false,
-          error: "Form parsing error: " + error.message,
-        })
-      })
-
-      // Set a timeout to handle cases where busboy doesn't finish
-      const timeout = setTimeout(() => {
-        if (!hasFinished) {
-          hasFinished = true
-          console.error("Busboy timeout - form parsing took too long")
-          res.status(408).json({
-            success: false,
-            error: "Form parsing timeout. Please try again.",
-          })
-        }
-      }, 30000) // 30 second timeout
-
-      // Clear timeout when busboy finishes
-      busboyInstance.on("finish", () => {
-        clearTimeout(timeout)
-      })
-
-      busboyInstance.on("error", () => {
-        clearTimeout(timeout)
-      })
-
-      // Start parsing - handle case where req.rawBody might be undefined
-      if (req.rawBody) {
-        busboyInstance.end(req.rawBody)
-      } else {
-        // For Firebase Functions, we need to read the request body
-        let body = Buffer.alloc(0)
-        req.on("data", (chunk) => {
-          body = Buffer.concat([body, chunk])
-        })
-        req.on("end", () => {
-          busboyInstance.end(body)
-        })
-      }
     } catch (error) {
-      console.error("Unexpected error:", error)
+      console.error("Error in submitForm:", error)
       res.status(500).json({
         success: false,
-        error: "Unexpected server error occurred.",
+        error: error.message || "An unexpected error occurred while processing your submission.",
       })
     }
   })
 })
 
-// Comment submission handler
+// Submit comment function (for adding comments to blog posts) - refactored to use single commit
 exports.submitComment = functions.region("asia-south1").https.onRequest((req, res) => {
   return corsHandler(req, res, async () => {
     // Handle preflight OPTIONS request
@@ -363,203 +404,88 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
         return
       }
 
-      // Check if request has multipart content-type
-      const contentType = req.headers["content-type"] || ""
-      if (!contentType.includes("multipart/form-data")) {
+      // Parse multipart data with comment specific options
+      const { fields, fileData, fileName, fileType } = await parseMultipartData(req, {
+        fileSize: 5 * 1024 * 1024, // 5MB limit for comments
+        allowedFileField: "image",
+        imageOnly: true,
+      })
+
+      const { postSlug, comment } = fields
+
+      // Validate required fields
+      if (!postSlug || !comment) {
         res.status(400).json({
           success: false,
-          error: "Invalid content type. Expected multipart/form-data.",
+          error: "Post slug and comment are required fields.",
         })
         return
       }
 
-      // Parse multipart form data using Busboy
-      const busboyInstance = busboy({
-        headers: req.headers,
-        limits: {
-          fileSize: 5 * 1024 * 1024, // 5MB limit for comments
-          files: 1,
-          fields: 10,
-        },
-      })
+      // Generate timestamp for comment
+      const now = new Date()
+      const timestamp = now.toISOString()
+      const timeStr = now.toISOString()
 
-      const fields = {}
-      let fileData = null
-      let fileName = null
-      let fileType = null
-      let hasFinished = false
-
-      // Handle form fields
-      busboyInstance.on("field", (fieldname, val) => {
-        console.log(`Comment field received: ${fieldname} = ${val}`)
-        fields[fieldname] = val
-      })
-
-      // Handle file uploads
-      busboyInstance.on("file", (fieldname, file, info) => {
-        console.log(`Comment file received: ${fieldname}, filename: ${info.filename}, mimetype: ${info.mimeType}`)
-
-        if (fieldname === "image" && info.filename && info.filename.trim() !== "") {
-          fileName = info.filename
-          fileType = info.mimeType
-          const chunks = []
-
-          file.on("data", (chunk) => {
-            chunks.push(chunk)
-          })
-
-          file.on("end", () => {
-            if (chunks.length > 0) {
-              fileData = Buffer.concat(chunks)
-              console.log(`Comment file data received: ${fileData.length} bytes`)
-            }
-          })
-        } else {
-          console.log("Skipping empty comment file field")
-          file.resume()
-        }
-      })
-
-      // Handle completion
-      busboyInstance.on("finish", async () => {
-        if (hasFinished) return
-        hasFinished = true
-
-        console.log("Comment busboy finished parsing")
-        console.log("Comment fields received:", Object.keys(fields))
-
-        try {
-          const { postSlug, userName, comment } = fields
-
-          // Validate required fields
-          if (!postSlug || !userName || !comment) {
-            res.status(400).json({
-              success: false,
-              error: "Post slug, user name, and comment are required fields.",
-            })
-            return
-          }
-
-          // Generate timestamp for comment
-          const now = new Date()
-          const timestamp = now.toISOString()
-          const commentId = uuidv4().substring(0, 8)
-
-          // Create comment content
-          let commentContent = `---
-author: ${userName}
+      // Create comment content
+      let commentContent = `---
 date: ${timestamp}
 ---
 
 ${comment}
 `
 
-          // Handle image attachment if present
-          let imageUrl = ""
-          if (fileData && fileName && fileType && fileType.startsWith("image/")) {
-            const imageFileName = `${postSlug}-comment-${commentId}-${fileName}`
-            const imagePath = `_posts/${postSlug}/${imageFileName}`
+      // Prepare files for single commit
+      const filesToCreate = []
 
-            // Upload image to GitHub
-            await octokit.repos.createOrUpdateFileContents({
-              owner: GITHUB_OWNER,
-              repo: GITHUB_REPO,
-              path: imagePath,
-              message: `Add comment image for post: ${postSlug}`,
-              content: fileData.toString("base64"),
-              branch: GITHUB_BRANCH,
-            })
+      // Handle image attachment if present
+      if (fileData && fileName && fileType && fileType.startsWith("image/")) {
+        const imageFileName = `comment-${timeStr}-${fileName}`
+        const imagePath = `_posts/${postSlug}/${imageFileName}`
 
-            imageUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/_posts/${postSlug}/${imageFileName}?raw=true`
-            commentContent += `
+        // Add image reference to comment content
+        const imageUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/_posts/${postSlug}/${imageFileName}?raw=true`
+        commentContent += `
 ![Comment Image](${imageUrl})
 `
-          }
 
-          // Create comment file in the post directory
-          const commentFileName = `comment-${commentId}.md`
-          const commentPath = `_posts/${postSlug}/${commentFileName}`
-
-          await octokit.repos.createOrUpdateFileContents({
-            owner: GITHUB_OWNER,
-            repo: GITHUB_REPO,
-            path: commentPath,
-            message: `Add comment by ${userName} to post: ${postSlug}`,
-            content: Buffer.from(commentContent).toString("base64"),
-            branch: GITHUB_BRANCH,
-          })
-
-          // Send success response
-          res.status(200).json({
-            success: true,
-            message: "Comment submitted successfully!",
-            data: {
-              commentId: commentId,
-              postSlug: postSlug,
-              userName: userName,
-              comment: comment,
-              imageUrl: imageUrl,
-              submittedAt: timestamp,
-            },
-          })
-        } catch (error) {
-          console.error("Error processing comment submission:", error)
-          res.status(500).json({
-            success: false,
-            error: "Error creating comment: " + error.message,
-          })
-        }
-      })
-
-      // Handle errors
-      busboyInstance.on("error", (error) => {
-        if (hasFinished) return
-        hasFinished = true
-
-        console.error("Comment busboy error:", error)
-        res.status(400).json({
-          success: false,
-          error: "Comment form parsing error: " + error.message,
-        })
-      })
-
-      // Set timeout
-      const timeout = setTimeout(() => {
-        if (!hasFinished) {
-          hasFinished = true
-          console.error("Comment busboy timeout")
-          res.status(408).json({
-            success: false,
-            error: "Comment form parsing timeout. Please try again.",
-          })
-        }
-      }, 30000)
-
-      busboyInstance.on("finish", () => {
-        clearTimeout(timeout)
-      })
-
-      busboyInstance.on("error", () => {
-        clearTimeout(timeout)
-      })
-
-      // Start parsing
-      if (req.rawBody) {
-        busboyInstance.end(req.rawBody)
-      } else {
-        let body = Buffer.alloc(0)
-        req.on("data", (chunk) => {
-          body = Buffer.concat([body, chunk])
-        })
-        req.on("end", () => {
-          busboyInstance.end(body)
+        // Add image file to the commit
+        filesToCreate.push({
+          path: imagePath,
+          content: Buffer.from(fileData).toString("base64"),
+          encoding: "base64",
         })
       }
+
+      // Create comment file in the post directory
+      const commentPath = `_posts/${postSlug}/comment-${timeStr}.md`
+
+      // Add comment file to the commit
+      filesToCreate.push({
+        path: commentPath,
+        content: commentContent,
+        encoding: "utf-8",
+      })
+
+      // Use the generic single commit function
+      const result = await createSingleCommit(filesToCreate, `Add comment to post: ${postSlug}`)
+
+      // Send success response
+      res.status(200).json({
+        success: true,
+        message: "Comment submitted successfully!",
+        data: {
+          postSlug: postSlug,
+          comment: comment,
+          githubUrl: result.githubUrl,
+          submittedAt: timestamp,
+        },
+      })
     } catch (error) {
-      console.error("Unexpected comment error:", error)
+      console.error("Error in submitComment:", error)
       res.status(500).json({
         success: false,
-        error: "Unexpected server error occurred.",
+        error: error.message || "An unexpected error occurred while processing your comment.",
       })
     }
   })
