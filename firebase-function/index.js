@@ -427,13 +427,14 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
       const timestamp = now.toISOString()
       const timeStr = now.toISOString()
 
-      // Create comment content
-      let commentContent = `---
-date: ${timestamp}
----
+      // Generate comment ID and sanitized timestamp for filename
+      const commentId = `comment-${timeStr.replace(/[:.]/g, "-")}`
 
-${comment}
-`
+      // Create comment content in YAML format for Staticman structure
+      let commentContent = `_id: ${commentId}
+date: ${timestamp}
+name: Anonymous
+message: ${comment}`
 
       // Prepare files for single commit
       const filesToCreate = []
@@ -446,19 +447,18 @@ ${comment}
         // Add image reference to comment content
         const imageUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/_posts/${postSlug}/${imageFileName}?raw=true`
         commentContent += `
-![Comment Image](${imageUrl})
-`
+image: ${imageUrl}`
 
         // Add image file to the commit
         filesToCreate.push({
           path: imagePath,
-          content: Buffer.from(fileData).toString("base64"),
-          encoding: "base64",
+          content: Buffer.from(fileData).toString(base64),
+          encoding: base64,
         })
       }
 
-      // Create comment file in the post directory
-      const commentPath = `_posts/${postSlug}/comment-${timeStr}.md`
+      // Create comment file in the Staticman structure
+      const commentPath = `_data/comments/${postSlug}/${commentId}.yml`
 
       // Add comment file to the commit
       filesToCreate.push({
