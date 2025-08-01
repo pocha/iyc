@@ -65,10 +65,10 @@ layout: default
               </div>
               <div class="text-gray-700">
                 {{ comment.message }}
-                {% if comment.image %}                  
-				<div class="mt-3">                    
-					<img src="{{ comment.image }}" alt="Comment attachment" class="max-w-full h-auto rounded-lg border border-gray-300 shadow-sm cursor-pointer" onclick="openImageModal(this.src)" style="max-height: 300px;">                  
-				</div>                
+                {% if comment.image %}
+				<div class="mt-3">
+					<img src="{{ comment.image }}" alt="Comment attachment" class="max-w-full h-auto rounded-lg border border-gray-300 shadow-sm cursor-pointer" onclick="openImageModal(this.src)" style="max-height: 300px;">
+				</div>
 				{% endif %}
               </div>
             </div>
