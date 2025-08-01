@@ -452,8 +452,8 @@ image: ${imageUrl}`
         // Add image file to the commit
         filesToCreate.push({
           path: imagePath,
-          content: Buffer.from(fileData).toString(base64),
-          encoding: base64,
+          content: Buffer.from(fileData).toString("base64"),
+          encoding: "base64",
         })
       }
 
