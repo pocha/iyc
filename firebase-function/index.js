@@ -360,8 +360,6 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
 
       // Use the createJekyllPost function - pass raw fileData for images and user cookie
       const result = await createJekyllPost(title, description, fileName, fileData, fileType, userCookie)
-      // Use the createJekyllPost function - pass raw fileData for images and user cookie
-      const result = await createJekyllPost(title, description, fileName, fileData, fileType, userCookie)
 
       // Send success response
       res.status(200).json({
