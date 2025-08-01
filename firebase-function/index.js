@@ -251,12 +251,8 @@ title: "${title}"
 date: ${timeStr}
 author: Anonymous
 slug: ${slug}
-user_cookie: ${userCookie || 'anonymous'}
+user_cookie: ${userCookie || "anonymous"}
 ---
-
-${description}
-
-`
 
 ${description}
 
@@ -348,9 +344,10 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       const { title, description } = fields
 
       // Extract user cookie from request headers
-      const userCookie = req.headers['x-user-cookie'] || req.headers['cookie']?.match(/userCookie=([^;]+)/)?.[1] || null
+      const userCookie = req.headers["x-user-cookie"] || req.headers["cookie"]?.match(/userCookie=([^;]+)/)?.[1] || null
 
       // Validate required fields
+      if (!title || !description) {
         res.status(400).json({
           success: false,
           error: "Title and description are required fields.",
