@@ -232,7 +232,7 @@ layout: default
 
   // Check if current user is post owner
   function revealEditDeleteButtonIfRequired() {
-    const userCookie = getUserCookie()
+    const userCookie = getOrSetUserCookie()
     const postOwnerCookie = '{{ page.owner_cookie | default: "" }}'
 
     if (postOwnerCookie && userCookie === postOwnerCookie) {
