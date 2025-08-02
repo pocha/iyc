@@ -189,7 +189,6 @@ title: Create New Post
             }
 
             // Submit to Firebase function
-            // Submit to Firebase function
             const response = await fetch(FIREBASE_FUNCTION_URL, {
                 method: 'POST',
                 headers: {
