@@ -107,9 +107,65 @@ title: Create New Post
 </div>
 
 
+<script src="assets/js/cookie-manager.js"></script>
 <script>
     // Firebase Function URL - Replace with your actual Firebase function URL
-    const FIREBASE_FUNCTION_URL = 'https://asia-south1-isocnet-2d37f.cloudfunctions.net/submitForm';
+    const FIREBASE_FUNCTION_URL = 'https://asia-south1-isocnet-2d37f.cloudfunctions.net/handleJekyllPost';
+
+
+    // Check if we're in edit mode
+    const urlParams = new URLSearchParams(window.location.search);
+    const editSlug = urlParams.get('edit');
+    let isEditMode = false;
+    let originalSlug = '';
+
+    // Function to fetch existing post content for editing
+    async function loadPostForEditing(slug) {
+        try {
+            // Fetch post content from GitHub raw URL
+            const response = await fetch(`https://raw.githubusercontent.com/isocnet/forum-theme/main/_posts/${slug}/index.md`);
+            if (response.ok) {
+                const content = await response.text();
+                
+                // Parse the frontmatter and content
+                const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+                if (frontmatterMatch) {
+                    const frontmatter = frontmatterMatch[1];
+                    const postContent = frontmatterMatch[2];
+                    
+                    // Extract title and description from frontmatter
+                    const titleMatch = frontmatter.match(/^title:\s*["']?([^"'\n]+)["']?$/m);
+                    const descriptionMatch = frontmatter.match(/^description:\s*["']?([^"'\n]+)["']?$/m);
+                    
+                    // Populate form fields
+                    if (titleMatch) {
+                        document.getElementById('title').value = titleMatch[1];
+                    }
+                    if (descriptionMatch) {
+                        document.getElementById('description').value = descriptionMatch[1];
+                    }
+                    
+                    // Update submit button text
+                    document.getElementById('submitText').textContent = 'Update Post';
+                    document.querySelector('h1').textContent = 'Edit Post';
+                    
+                    isEditMode = true;
+                    originalSlug = slug;
+                }
+            }
+        } catch (error) {
+            console.error('Error loading post for editing:', error);
+            document.getElementById('errorText').textContent = 'Failed to load post for editing';
+            document.getElementById('errorMessage').classList.remove('hidden');
+        }
+    }
+
+    // Load post for editing if edit parameter is present
+    if (editSlug) {
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPostForEditing(editSlug);
+        });
+    }
 
     // File upload handling
     const fileInput = document.getElementById('file');
@@ -130,8 +186,22 @@ title: Create New Post
             fileName.textContent = file.name;
             fileUploadContent.classList.add('hidden');
             fileSelectedContent.classList.remove('hidden');
-        }
-    });
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('title', document.getElementById('title').value);
+            formData.append('description', document.getElementById('description').value);
+            if (document.getElementById('file').files[0]) {
+                formData.append('file', document.getElementById('file').files[0]);
+            }
+            
+            // Add edit mode parameters if editing
+            if (isEditMode) {
+                formData.append('isEdit', 'true');
+                formData.append('originalSlug', originalSlug);
+            }
+
+            // Submit to Firebase function (will be updated to use handleJekyllPost)
+            const response = await fetch(FIREBASE_FUNCTION_URL, {
 
     // Drag and drop functionality
     fileUploadArea.addEventListener('dragover', (e) => {

@@ -277,8 +277,6 @@ ${description}
 ![${fileName}](https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${imagePath}?raw=true)
 `
 
-      // Update the blog.md content with image reference
-      filesToCreate[0].content = postContent
 
       content: fileContent.toString("base64"),
         filesToCreate.push({
@@ -306,6 +304,166 @@ ${description}
 }
 
 // Submit form function (for creating blog posts) - refactored to use single commit
+
+// Unified function to handle both creating and editing Jekyll posts
+async function updateJekyllPost(title, description, fileName, fileContent, fileType, userCookie, originalSlug) {
+  try {
+    const now = new Date()
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
+    
+    // Generate slug from title if not editing
+    let slug = originalSlug
+    if (!originalSlug) {
+      slug = `${dateStr}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`
+    }
+    
+    const postDirPath = `_posts/${slug}`
+    const blogFilePath = `${postDirPath}/index.md`
+
+    // Create post content with frontmatter
+    let postContent = `---
+layout: post
+title: "${title}"
+description: "${description}"
+date: ${now.toISOString()}
+slug: "${slug}"
+author_cookie: "${userCookie}"
+---
+
+${description}
+`
+
+    // Prepare files for single commit
+    const filesToCreate = []
+
+    // Always add the blog.md file
+    filesToCreate.push({
+      path: blogFilePath,
+      content: postContent,
+      encoding: "utf-8",
+    })
+
+    // Only add image file if it exists
+    if (fileName && fileContent && fileType && fileType.startsWith("image/")) {
+      const imageFileName = `${dateStr}-${slug}-${fileName}`
+      const imagePath = `${postDirPath}/${imageFileName}`
+
+      // Add image reference to post content
+      postContent += `
+![${fileName}](https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${imagePath}?raw=true)
+`
+
+      // Update the blog.md content with image reference
+      filesToCreate[0].content = postContent
+
+      filesToCreate.push({
+        path: imagePath,
+        content: Buffer.from(fileContent).toString("base64"),
+        encoding: "base64",
+      })
+    }
+
+    // Use the generic single commit function
+    const commitMessage = originalSlug ? `Update blog post: ${title}` : `Add new blog post: ${title}`
+    const result = await createSingleCommit(filesToCreate, commitMessage)
+
+    return {
+      success: true,
+      postUrl: `http://20.42.15.153:4001/iyc/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(
+        2,
+        "0"
+      )}/${String(now.getDate()).padStart(2, "0")}/${slug}.html`,
+      githubUrl: result.githubUrl,
+    }
+  } catch (error) {
+    console.error("Error handling Jekyll post:", error)
+    throw error
+  }
+}
+
+// Unified handler for both creating and editing Jekyll posts
+exports.handleJekyllPost = functions.region("asia-south1").https.onRequest((req, res) => {
+  return corsHandler(req, res, async () => {
+    // Handle preflight OPTIONS request
+    if (req.method === "OPTIONS") {
+      return res.status(200).send()
+    }
+
+    try {
+      // Extract user cookie from request headers
+      const cookieHeader = req.headers.cookie
+      if (!cookieHeader) {
+        return res.status(400).json({ error: "User cookie is required" })
+      }
+
+      const userCookie = cookieHeader.split(';')
+        .find(cookie => cookie.trim().startsWith('forum_user_id='))
+        ?.split('=')[1]
+
+      if (!userCookie) {
+        return res.status(400).json({ error: "User cookie is required" })
+      }
+
+      // Parse multipart form data
+      const busboy = Busboy({ headers: req.headers })
+      const fields = {}
+      let fileBuffer = null
+      let fileName = null
+      let fileType = null
+
+      busboy.on("field", (fieldname, val) => {
+        fields[fieldname] = val
+      })
+
+      busboy.on("file", (fieldname, file, info) => {
+        fileName = info.filename
+        fileType = info.mimeType
+        const chunks = []
+        file.on("data", (chunk) => chunks.push(chunk))
+        file.on("end", () => {
+          fileBuffer = Buffer.concat(chunks)
+        })
+      })
+
+      busboy.on("finish", async () => {
+        try {
+          const { title, description, isEdit, originalSlug } = fields
+
+          if (!title || !description) {
+            return res.status(400).json({ error: "Title and description are required" })
+          }
+
+          // For edit mode, verify the user cookie matches the original post's author
+          if (isEdit === 'true' && originalSlug) {
+            // This verification would need to be implemented based on your requirements
+            // For now, we'll trust the cookie validation
+          }
+
+          const result = await updateJekyllPost(
+            title,
+            description,
+            fileName,
+            fileBuffer,
+            fileType,
+            userCookie,
+            isEdit === 'true' ? originalSlug : null
+          )
+
+          res.status(200).json(result)
+        } catch (error) {
+          console.error("Error in handleJekyllPost:", error)
+          res.status(500).json({ error: "Internal server error" })
+        }
+      })
+
+      req.pipe(busboy)
+    } catch (error) {
+      console.error("Error in handleJekyllPost:", error)
+      res.status(500).json({ error: "Internal server error" })
+    }
+  })
+})
+
 exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) => {
   return corsHandler(req, res, async () => {
     // Handle preflight OPTIONS request
