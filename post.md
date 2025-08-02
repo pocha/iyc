@@ -281,7 +281,7 @@ title: Create New Post
             const response = await fetch(FIREBASE_FUNCTION_URL, {
                 method: 'POST',
                 headers: {
-                    'Cookie': `forum_user_id=${userCookie}`
+                    'x-user-cookie': userCookie
                 },
                 body: formData
             });
