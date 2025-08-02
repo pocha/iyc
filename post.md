@@ -268,6 +268,7 @@ title: Create New Post
         try {
             // Get or set user cookie
             const userCookie = getOrSetUserCookie();
+            console.log('Debug: userCookie value:', userCookie);
             
             // Prepare form data
             const formData = new FormData();

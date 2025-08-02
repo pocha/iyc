@@ -59,11 +59,12 @@ title: Whats up IYC
   </div>
 </div>
 
-<script src="assets/js/cookie-manager.js"></script>
+<script src="{{ '/assets/js/cookie-manager.js' | relative_url }}"></script>
 <script>
   // Show edit buttons for posts owned by current user
   function showEditButtons() {
     const currentUserCookie = getCookie()
+		  console.log(currentUserCookie)
     if (!currentUserCookie) return
 
     const editButtons = document.querySelectorAll(".edit-post-btn")
