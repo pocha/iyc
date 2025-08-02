@@ -225,6 +225,118 @@ async function createSingleCommit(files, commitMessage) {
 }
 
 // Function to create Jekyll post using single commit
+async function updateJekyllPost(slug, title, description, fileName, fileContent, fileType, userCookie) {
+  try {
+    // First, find the existing post by searching for files with the slug
+    const { data: repoContents } = await octokit.rest.repos.getContent({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      path: '_posts',
+      ref: GITHUB_BRANCH,
+    })
+
+    // Find the post directory that contains the slug
+    const postDir = repoContents.find(item => 
+      item.type === 'dir' && item.name.includes(slug)
+    )
+
+    if (!postDir) {
+      throw new Error(`Post with slug '${slug}' not found`)
+    }
+
+    const postDirPath = `_posts/${postDir.name}`
+    const blogFilePath = `${postDirPath}/index.md`
+
+    // Get the existing post content to verify user ownership
+    const { data: existingFile } = await octokit.rest.repos.getContent({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      path: blogFilePath,
+      ref: GITHUB_BRANCH,
+    })
+
+    const existingContent = Buffer.from(existingFile.content, 'base64').toString('utf-8')
+    
+    // Check if the user cookie matches the one in the existing post
+    const cookieMatch = existingContent.match(/user_cookie:\s*(.+)/)
+    const existingCookie = cookieMatch ? cookieMatch[1].trim() : null
+
+    // Always update the blog.md file
+    filesToUpdate.push({
+      path: blogFilePath,
+      content: updatedContent,
+      encoding: "utf-8"
+    })
+    // Extract existing date from the post
+    const dateMatch = existingContent.match(/date:\s*(.+)/)
+    const existingDate = dateMatch ? dateMatch[1].trim() : new Date().toISOString()
+
+    // Create updated Jekyll front matter and content
+    let updatedContent = `---
+layout: post
+title: "${title}"
+date: ${existingDate}
+author: Anonymous
+slug: ${slug}
+user_cookie: ${userCookie}
+---
+
+${description}
+
+`
+
+    // Prepare files for single commit
+    const filesToUpdate = []
+
+    // Use the existing createSingleCommit function for updates
+    const result = await createSingleCommit(filesToUpdate, `Update blog post: ${title}`)
+    filesToUpdate.push({
+      path: blogFilePath,
+      content: updatedContent,
+      encoding: "utf-8",
+      sha: existingFile.sha
+    })
+
+    // Handle new image if provided
+    if (fileName && fileContent && fileType && fileType.startsWith("image/")) {
+      const imageFileName = `${postDir.name}-${fileName}`
+      const imagePath = `${postDirPath}/${imageFileName}`
+
+      // Add image reference to post content
+      updatedContent += `
+![${fileName}](https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${imagePath}?raw=true)
+`
+
+      // Update the blog.md content with image reference
+      filesToUpdate[0].content = updatedContent
+
+      // Add new image file
+      filesToUpdate.push({
+        path: imagePath,
+        content: Buffer.from(fileContent).toString("base64"),
+        encoding: "base64",
+      })
+    }
+
+    // Use the generic single commit function for updates
+    const result = await updateSingleCommit(filesToUpdate, `Update blog post: ${title}`)
+
+    // Extract date components for URL
+    const dateObj = new Date(existingDate)
+    return {
+      success: true,
+      postUrl: `http://20.42.15.153:4001/iyc/${dateObj.getFullYear()}/${String(dateObj.getMonth() + 1).padStart(
+        2,
+        "0"
+      )}/${String(dateObj.getDate()).padStart(2, "0")}/${slug}.html`,
+      githubUrl: result.githubUrl,
+    }
+  } catch (error) {
+    console.error("Error updating Jekyll post:", error)
+    throw error
+  }
+}
+
 async function createJekyllPost(title, description, fileName, fileContent, fileType, userCookie) {
   try {
     const now = new Date()
@@ -341,35 +453,49 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       })
 
       // Extract form data
-      const { title, description } = fields
+      const { title, description, slug } = fields
 
       // Extract user cookie from request headers
       const userCookie = req.headers["x-user-cookie"] || req.headers["cookie"]?.match(/userCookie=([^;]+)/)?.[1] || null
 
 
-      // Validate that cookie is present (mandatory for post creation)
+      // Validate that cookie is present (mandatory for post creation/editing)
       if (!userCookie) {
         res.status(401).json({
           success: false,
-          error: "User cookie is required to create a post. Please ensure you have a valid session.",
+          error: "User cookie is required to create or edit a post. Please ensure you have a valid session.",
         })
         return
       }
-      // Validate required fields
-      if (!title || !description) {
-        res.status(400).json({
-          success: false,
-          error: "Title and description are required fields.",
+          error: "Cookie mismatch. You can only edit posts created with your session.",
         })
         return
       }
+      // Determine if this is an edit operation
+      const isEdit = slug && slug.trim() !== ''
 
-      // Use the createJekyllPost function - pass raw fileData for images and user cookie
-      const result = await createJekyllPost(title, description, fileName, fileData, fileType, userCookie)
+      let result
+      if (isEdit) {
+        // For edit operations, update existing post
+        result = await updateJekyllPost(slug, title, description, fileName, fileData, fileType, userCookie)
+      } else {
+        // For create operations, create new post
+        result = await createJekyllPost(title, description, fileName, fileData, fileType, userCookie)
+      }
 
       // Send success response
       res.status(200).json({
         success: true,
+        message: isEdit ? "Blog post updated successfully!" : "Blog post submitted successfully!",
+        data: {
+          title: title,
+          description: description,
+          postUrl: result.postUrl,
+          githubUrl: result.githubUrl,
+          submittedAt: new Date().toISOString(),
+          operation: isEdit ? 'update' : 'create'
+        },
+      })
         message: "Blog post submitted successfully!",
         data: {
           title: title,
