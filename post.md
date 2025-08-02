@@ -122,6 +122,7 @@ title: Create New Post
     // Click to upload
     fileUploadArea.addEventListener('click', () => {
         fileInput.click();
+    });
 
     // Edit functionality - detect edit mode and populate form
     function initializeEditMode() {
@@ -146,19 +147,21 @@ title: Create New Post
     
     async function loadPostForEdit(postSlug) {
         try {
-            // Fetch the post markdown file from GitHub - posts are stored in directories with index.md
-            const response = await fetch(`/_posts/${postSlug}/index.md`);
+            // Fetch the post markdown file directly from GitHub raw content
+            const githubUrl = `https://raw.githubusercontent.com/pocha/iyc/nonbios-jekyll/_posts/${postSlug}/index.md`;
+            const response = await fetch(githubUrl);
             if (response.ok) {
                 const postContent = await response.text();
                 parseAndPopulateForm(postContent, postSlug);
             } else {
-                throw new Error('Could not load post for editing');
+                throw new Error(`Could not load post for editing (Status: ${response.status})`);
             }
         } catch (error) {
             console.error('Error loading post for edit:', error);
             document.getElementById('errorText').textContent = 'Could not load post for editing: ' + error.message;
             document.getElementById('errorMessage').classList.remove('hidden');
         }
+    }
     }
     
     function parseAndPopulateForm(postContent, postSlug) {
@@ -211,7 +214,6 @@ title: Create New Post
     // Initialize edit mode on page load
     document.addEventListener('DOMContentLoaded', initializeEditMode);
 
-    });
 
     // File selection
     fileInput.addEventListener('change', (e) => {
