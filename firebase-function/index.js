@@ -319,7 +319,7 @@ ${description}
     }
 
     // Use the generic single commit function for updates
-    const result = await updateSingleCommit(filesToUpdate, `Update blog post: ${title}`)
+    await createSingleCommit(filesToUpdate, `Update blog post: ${title}`)
 
     // Extract date components for URL
     const dateObj = new Date(existingDate)
@@ -466,10 +466,10 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
           error: "User cookie is required to create or edit a post. Please ensure you have a valid session.",
         })
         return
+      // For edit operations, validate cookie matches the post creator
+      if (isEdit && slug) {
+        // This validation will be done inside updateJekyllPost function
       }
-          error: "Cookie mismatch. You can only edit posts created with your session.",
-        })
-        return
       }
       // Determine if this is an edit operation
       const isEdit = slug && slug.trim() !== ''
@@ -494,15 +494,6 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
           githubUrl: result.githubUrl,
           submittedAt: new Date().toISOString(),
           operation: isEdit ? 'update' : 'create'
-        },
-      })
-        message: "Blog post submitted successfully!",
-        data: {
-          title: title,
-          description: description,
-          postUrl: result.postUrl,
-          githubUrl: result.githubUrl,
-          submittedAt: new Date().toISOString(),
         },
       })
     } catch (error) {
