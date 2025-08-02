@@ -35,6 +35,7 @@ title: Whats up IYC
               class="edit-post-btn hidden bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-all"
               data-post-cookie="{{ post.user_cookie | default: 'anonymous' }}"
               data-post-slug="{{ post.slug }}"
+              data-post-date="{{ post.date | date: '%Y-%m-%d' }}"
               onclick="editPost('{{ post.slug }}', '{{ post.title | escape }}', '{{ post.content | strip_html | escape }}')"
             >
               Edit
@@ -75,8 +76,10 @@ title: Whats up IYC
   }
 
   // Edit post function
+  // Edit post function
   function editPost(slug, title, content) {
-    window.location.href = `/post.html?edit=true&slug=${slug}`
+    const postDate = event.target.getAttribute('data-post-date')
+    window.location.href = `/post.html?edit=true&date=${postDate}&slug=${slug}`
   }
 
   // Initialize on page load

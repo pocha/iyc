@@ -130,26 +130,30 @@ title: Create New Post
     function initializeEditMode() {
         const urlParams = new URLSearchParams(window.location.search);
         const editMode = urlParams.get('edit');
+        const postDate = urlParams.get('date');
         const postSlug = urlParams.get('slug');
         
-        if (editMode === 'true' && postSlug) {
+        if (editMode === 'true' && postDate && postSlug) {
             // Update page title and subtitle for edit mode
             document.getElementById('pageTitle').textContent = '✏️ Edit Your Post';
             document.getElementById('pageSubtitle').textContent = 'Update your post and share your revised thoughts';
             document.getElementById('submitAction').textContent = 'Update Post';
             
+            // Construct the full postSlug in format YYYY-MM-DD-slug
+            const fullPostSlug = `${postDate}-${postSlug}`;
+            
             // Load existing post data
-            loadPostForEdit(postSlug);
+            loadPostForEdit(fullPostSlug);
         }
     }
     
     async function loadPostForEdit(postSlug) {
         try {
-            // Fetch the post markdown file from GitHub
-            const response = await fetch(`/_posts/${postSlug}.md`);
+            // Fetch the post markdown file from GitHub - posts are stored in directories with index.md
+            const response = await fetch(`/_posts/${postSlug}/index.md`);
             if (response.ok) {
                 const postContent = await response.text();
-                parseAndPopulateForm(postContent);
+                parseAndPopulateForm(postContent, postSlug);
             } else {
                 throw new Error('Could not load post for editing');
             }
@@ -160,12 +164,12 @@ title: Create New Post
         }
     }
     
-    function parseAndPopulateForm(postContent) {
+    function parseAndPopulateForm(postContent, postSlug) {
         // Parse the markdown front matter and content
         const frontMatterMatch = postContent.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
         if (frontMatterMatch) {
             const frontMatter = frontMatterMatch[1];
-            const content = frontMatterMatch[2];
+            let content = frontMatterMatch[2];
             
             // Extract title from front matter
             const titleMatch = frontMatter.match(/title:\s*["']?(.*?)["']?\s*$/m);
@@ -173,9 +177,38 @@ title: Create New Post
                 document.getElementById('title').value = titleMatch[1];
             }
             
-            // Set description as the content
+            // Extract and handle existing images
+            const imageMatches = content.match(/!\[([^\]]*)\]\(([^)]+)\)/g);
+            if (imageMatches && imageMatches.length > 0) {
+                // Extract the first image for preview
+                const firstImageMatch = imageMatches[0].match(/!\[([^\]]*)\]\(([^)]+)\)/);
+                if (firstImageMatch) {
+                    const imageUrl = firstImageMatch[2];
+                    const imageName = firstImageMatch[1];
+                    
+                    // Show existing image preview
+                    showExistingImagePreview(imageUrl, imageName);
+                    
+                    // Remove image markdown from content for clean editing
+                    content = content.replace(/!\[([^\]]*)\]\(([^)]+)\)\s*/g, '').trim();
+                }
+            }
+            
+            // Set description as the content (without image references)
             document.getElementById('description').value = content.trim();
         }
+    }
+    
+    function showExistingImagePreview(imageUrl, imageName) {
+        const fileUploadContent = document.getElementById('fileUploadContent');
+        fileUploadContent.innerHTML = `
+            <div class="existing-image-preview">
+                <div class="text-2xl mb-2 text-green-600">🖼️</div>
+                <p class="text-gray-700 text-lg font-semibold mb-2">Current Image: ${imageName}</p>
+                <img src="${imageUrl}" alt="${imageName}" class="max-w-full max-h-48 mx-auto rounded-lg shadow-md mb-4">
+                <p class="text-gray-500 text-sm">Upload a new file to replace this image</p>
+            </div>
+        `;
     }
     
     // Initialize edit mode on page load
