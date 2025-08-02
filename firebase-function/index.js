@@ -226,48 +226,30 @@ async function createSingleCommit(files, commitMessage) {
 
 // Function to create Jekyll post using single commit
 // Combined function to handle both create and update Jekyll post operations
-async function handleJekyllPost(title, description, fileName, fileContent, fileType, userCookie, slug = null) {
+async function handleJekyllPost(slug, title, description, fileName, fileContent, fileType, userCookie) {
   try {
     const isEdit = slug && slug.trim() !== ''
     
     if (isEdit) {
       // EDIT OPERATION: Fetch existing post content to verify ownership
-      
-      // First, find the existing post by searching for files with the slug
-      const { data: repoContents } = await octokit.rest.repos.getContent({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        path: '_posts',
-        ref: GITHUB_BRANCH,
-      })
-
-      // Find the post directory that contains the slug
-      const postDir = repoContents.find(item => 
-        item.type === 'dir' && item.name.includes(slug)
-      )
-
-      if (!postDir) {
-        throw new Error(`Post with slug '${slug}' not found`)
-      }
-
-      const postDirPath = `_posts/${postDir.name}`
-      const blogFilePath = `${postDirPath}/index.md`
+      // Directly construct the path using the slug pattern
+      const blogFilePath = `_posts/${slug}/index.md`
 
       // Get the existing post content to verify user ownership
-      const { data: existingFile } = await octokit.rest.repos.getContent({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        path: blogFilePath,
-        ref: GITHUB_BRANCH,
-      })
-
-      const existingContent = Buffer.from(existingFile.content, 'base64').toString('utf-8')
-      
-      // Check if the user cookie matches the one in the existing post
-      const cookieMatch = existingContent.match(/user_cookie:\s*(.+)/)
-      const existingCookie = cookieMatch ? cookieMatch[1].trim() : null
-
-      if (existingCookie !== userCookie) {
+      let existingFile, existingContent
+      try {
+        const response = await octokit.rest.repos.getContent({
+          owner: GITHUB_OWNER,
+          repo: GITHUB_REPO,
+          path: blogFilePath,
+          ref: GITHUB_BRANCH,
+        })
+        existingFile = response.data
+        existingContent = Buffer.from(existingFile.content, 'base64').toString('utf-8')
+      } catch (error) {
+        if (error.status === 404) {
+          throw new Error(`Post not found: ${slug}`)
+        }
         throw new Error('Unauthorized: You can only edit posts you created')
       }
 
