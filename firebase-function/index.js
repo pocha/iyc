@@ -229,11 +229,12 @@ async function createSingleCommit(files, commitMessage) {
 async function handleJekyllPost(slug, title, description, fileName, fileContent, fileType, userCookie) {
   try {
     const isEdit = slug && slug.trim() !== ''
+    let postSlug, postDate, postDirPath, blogFilePath, commitMessage
     
     if (isEdit) {
       // EDIT OPERATION: Fetch existing post content to verify ownership
       // Directly construct the path using the slug pattern
-      const blogFilePath = `_posts/${slug}/index.md`
+      blogFilePath = `_posts/${slug}/index.md`
 
       // Get the existing post content to verify user ownership
       let existingFile, existingContent
@@ -263,76 +264,19 @@ async function handleJekyllPost(slug, title, description, fileName, fileContent,
 
       // Extract existing date to preserve it
       const dateMatch = existingContent.match(/date:\s*(.+)/)
-      const existingDate = dateMatch ? dateMatch[1].trim() : new Date().toISOString()
-
-      // Create updated Jekyll front matter and content
-      let updatedContent = `---
-layout: post
-title: "${title}"
-date: ${existingDate}
-author: Anonymous
-slug: ${slug}
-user_cookie: ${userCookie}
----
-
-${description}
-
-`
-
-      // Prepare files for single commit
-      const filesToUpdate = []
-
-      // Always update the blog.md file
-      filesToUpdate.push({
-        path: blogFilePath,
-        content: updatedContent,
-        encoding: "utf-8",
-      })
-
-      // Handle new image if provided
-      if (fileName && fileContent && fileType && fileType.startsWith("image/")) {
-        const imageFileName = `${postDir.name}-${fileName}`
-        const imagePath = `${postDirPath}/${imageFileName}`
-
-        // Add image reference to post content
-        updatedContent += `
-![${fileName}](https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${imagePath}?raw=true)
-`
-
-        // Update the blog.md content with image reference
-        filesToUpdate[0].content = updatedContent
-
-        // Add new image file
-        filesToUpdate.push({
-          path: imagePath,
-          content: Buffer.from(fileContent).toString("base64"),
-          encoding: "base64",
-        })
-      }
-
-      // Use the generic single commit function for updates
-      const result = await createSingleCommit(filesToUpdate, `Update blog post: ${title}`)
-
-      // Extract date components for URL
-      const dateObj = new Date(existingDate)
-      return {
-        success: true,
-        postUrl: `http://20.42.15.153:4001/iyc/${dateObj.getFullYear()}/${String(dateObj.getMonth() + 1).padStart(
-          2,
-          "0"
-        )}/${String(dateObj.getDate()).padStart(2, "0")}/${slug}.html`,
-        githubUrl: result.githubUrl,
-      }
+      postDate = dateMatch ? dateMatch[1].trim() : new Date().toISOString()
+      postSlug = slug
+      postDirPath = `_posts/${slug}`
+      commitMessage = `Update blog post: ${title}`
 
     } else {
       // CREATE OPERATION: Create new post
-      
       const now = new Date()
       const dateStr = now.toISOString().split("T")[0] // YYYY-MM-DD format
-      const timeStr = now.toISOString()
+      postDate = now.toISOString()
 
       // Create slug from title
-      const newSlug = title
+      postSlug = title
         .toLowerCase()
         .replace(/[^a-z0-9\s-]/g, "")
         .replace(/\s+/g, "-")
@@ -340,17 +284,19 @@ ${description}
         .trim("-")
 
       // Create directory name for the blog post
-      const postDirName = `${dateStr}-${newSlug}`
-      const postDirPath = `_posts/${postDirName}`
-      const blogFilePath = `${postDirPath}/index.md`
+      const postDirName = `${dateStr}-${postSlug}`
+      postDirPath = `_posts/${postDirName}`
+      blogFilePath = `${postDirPath}/index.md`
+      commitMessage = `Create new blog post: ${title}`
+    }
 
-      // Create Jekyll front matter and content
-      let postContent = `---
+    // COMMON LOGIC: Create Jekyll front matter and content
+    let postContent = `---
 layout: post
 title: "${title}"
-date: ${timeStr}
+date: ${postDate}
 author: Anonymous
-slug: ${newSlug}
+slug: ${postSlug}
 user_cookie: ${userCookie || "anonymous"}
 ---
 
@@ -358,53 +304,57 @@ ${description}
 
 `
 
-      // Prepare files for single commit
-      const filesToCreate = []
+    // Prepare files for single commit
+    const filesToProcess = []
 
-      // Always add the blog.md file
-      filesToCreate.push({
-        path: blogFilePath,
-        content: postContent,
-        encoding: "utf-8",
-      })
+    // Always add the blog.md file
+    filesToProcess.push({
+      path: blogFilePath,
+      content: postContent,
+      encoding: "utf-8",
+    })
 
-      // Only add image file if it exists
-      if (fileName && fileContent && fileType && fileType.startsWith("image/")) {
-        const imageFileName = `${dateStr}-${newSlug}-${fileName}`
-        const imagePath = `${postDirPath}/${imageFileName}`
+    // Handle image if provided
+    if (fileName && fileContent && fileType && fileType.startsWith("image/")) {
+      const imageFileName = isEdit ? 
+        `${postSlug}-${fileName}` : 
+        `${postDate.split("T")[0]}-${postSlug}-${fileName}`
+      const imagePath = `${postDirPath}/${imageFileName}`
 
-        // Add image reference to post content
-        postContent += `
+      // Add image reference to post content
+      postContent += `
 ![${fileName}](https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${imagePath}?raw=true)
 `
 
-        // Update the blog.md content with image reference
-        filesToCreate[0].content = postContent
+      // Update the blog.md content with image reference
+      filesToProcess[0].content = postContent
 
-        filesToCreate.push({
-          path: imagePath,
-          content: Buffer.from(fileContent).toString("base64"),
-          encoding: "base64",
-        })
-      }
-
-      // Use the generic single commit function
-      const result = await createSingleCommit(filesToCreate, `Create new blog post: ${title}`)
-
-      return {
-        success: true,
-        postUrl: `http://20.42.15.153:4001/iyc/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(
-          2,
-          "0"
-        )}/${String(now.getDate()).padStart(2, "0")}/${newSlug}.html`,
-        githubUrl: result.githubUrl,
-      }
+      // Add image file
+      filesToProcess.push({
+        path: imagePath,
+        content: Buffer.from(fileContent).toString("base64"),
+        encoding: "base64",
+      })
     }
+
+    // Use the generic single commit function
+    const result = await createSingleCommit(filesToProcess, commitMessage)
+
+    // Extract date components for URL
+    const dateObj = new Date(postDate)
+    return {
+      success: true,
+      postUrl: `http://20.42.15.153:4001/iyc/${dateObj.getFullYear()}/${String(dateObj.getMonth() + 1).padStart(
+        2,
+        "0"
+      )}/${String(dateObj.getDate()).padStart(2, "0")}/${postSlug}.html`,
+      githubUrl: result.githubUrl,
+    }
+
   } catch (error) {
     console.error("Error handling Jekyll post:", error)
     throw error
   }
-}
 
 // Submit form function (for creating blog posts) - refactored to use single commit
 exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) => {
@@ -455,10 +405,6 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
           error: "User cookie is required to create or edit a post. Please ensure you have a valid session.",
         })
         return
-      // For edit operations, validate cookie matches the post creator
-      if (isEdit && slug) {
-        // This validation will be done inside updateJekyllPost function
-      }
       }
       // Determine if this is an edit operation
       const isEdit = slug && slug.trim() !== ''
@@ -488,6 +434,7 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
     }
   })
 })
+    }
 
 // Submit comment function (for adding comments to blog posts) - refactored to use single commit
 exports.submitComment = functions.region("asia-south1").https.onRequest((req, res) => {
