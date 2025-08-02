@@ -36,7 +36,7 @@ title: Whats up IYC
               data-post-cookie="{{ post.user_cookie | default: 'anonymous' }}"
               data-post-slug="{{ post.slug }}"
               data-post-date="{{ post.date | date: '%Y-%m-%d' }}"
-              onclick="editPost('{{ post.slug }}', '{{ post.title | escape }}', '{{ post.content | strip_html | escape }}')"
+              onclick="editPost('{{ post.slug }}')"
             >
               Edit
             </button>
@@ -77,7 +77,7 @@ title: Whats up IYC
 
   // Edit post function
   // Edit post function
-  function editPost(slug, title, content) {
+  function editPost(slug) {
     const postDate = event.target.getAttribute('data-post-date')
     window.location.href = `/post.html?edit=true&date=${postDate}&slug=${slug}`
   }
