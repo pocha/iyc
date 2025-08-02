@@ -184,9 +184,10 @@ layout: default
   }
 
   // Check if current user is post owner
+  // Check if current user is post owner
   function revealEditDeleteButtonIfRequired() {
     const userCookie = getCookie()
-    const postOwnerCookie = '{{ page.owner_cookie | default: "" }}'
+    const postOwnerCookie = '{{ page.user_cookie | default: "" }}'
 
     if (postOwnerCookie && userCookie === postOwnerCookie) {
       document.getElementById("postOwnerActions").style.display = "block"
