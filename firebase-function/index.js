@@ -228,9 +228,9 @@ async function createSingleCommit(files, commitMessage) {
 // Combined function to handle both create and update Jekyll post operations
 async function handleJekyllPost(slug, title, description, fileName, fileContent, fileType, userCookie) {
   try {
-    const isEdit = slug && slug.trim() !== ''
+    const isEdit = slug && slug.trim() !== ""
     let postSlug, postDate, postDirPath, blogFilePath, commitMessage
-    
+
     if (isEdit) {
       // EDIT OPERATION: Fetch existing post content to verify ownership
       // Directly construct the path using the slug pattern
@@ -246,20 +246,20 @@ async function handleJekyllPost(slug, title, description, fileName, fileContent,
           ref: GITHUB_BRANCH,
         })
         existingFile = response.data
-        existingContent = Buffer.from(existingFile.content, 'base64').toString('utf-8')
+        existingContent = Buffer.from(existingFile.content, "base64").toString("utf-8")
 
-      // Check if the user cookie matches the one in the existing post
-      const cookieMatch = existingContent.match(/user_cookie:\s*(.+)/)
-      const existingCookie = cookieMatch ? cookieMatch[1].trim() : null
+        // Check if the user cookie matches the one in the existing post
+        const cookieMatch = existingContent.match(/user_cookie:\s*(.+)/)
+        const existingCookie = cookieMatch ? cookieMatch[1].trim() : null
 
-      if (existingCookie !== userCookie) {
-        throw new Error('Unauthorized: You can only edit posts you created')
-      }
+        if (existingCookie !== userCookie) {
+          throw new Error("Unauthorized: You can only edit posts you created")
+        }
       } catch (error) {
         if (error.status === 404) {
           throw new Error(`Post not found: ${slug}`)
         }
-        throw new Error('Unauthorized: You can only edit posts you created')
+        throw new Error("Unauthorized: You can only edit posts you created")
       }
 
       // Extract existing date to preserve it
@@ -268,7 +268,6 @@ async function handleJekyllPost(slug, title, description, fileName, fileContent,
       postSlug = slug
       postDirPath = `_posts/${slug}`
       commitMessage = `Update blog post: ${title}`
-
     } else {
       // CREATE OPERATION: Create new post
       const now = new Date()
@@ -316,9 +315,7 @@ ${description}
 
     // Handle image if provided
     if (fileName && fileContent && fileType && fileType.startsWith("image/")) {
-      const imageFileName = isEdit ? 
-        `${postSlug}-${fileName}` : 
-        `${postDate.split("T")[0]}-${postSlug}-${fileName}`
+      const imageFileName = isEdit ? `${postSlug}-${fileName}` : `${postDate.split("T")[0]}-${postSlug}-${fileName}`
       const imagePath = `${postDirPath}/${imageFileName}`
 
       // Add image reference to post content
@@ -350,11 +347,11 @@ ${description}
       )}/${String(dateObj.getDate()).padStart(2, "0")}/${postSlug}.html`,
       githubUrl: result.githubUrl,
     }
-
   } catch (error) {
     console.error("Error handling Jekyll post:", error)
     throw error
   }
+}
 
 // Submit form function (for creating blog posts) - refactored to use single commit
 exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) => {
@@ -395,8 +392,8 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       const { title, description, slug } = fields
 
       // Extract user cookie from request headers
-      const userCookie = req.headers["x-user-cookie"] || req.headers["cookie"]?.match(/forum_user_id=([^;]+)/)?.[1] || null
-
+      const userCookie =
+        req.headers["x-user-cookie"] || req.headers["cookie"]?.match(/forum_user_id=([^;]+)/)?.[1] || null
 
       // Validate that cookie is present (mandatory for post creation/editing)
       if (!userCookie) {
@@ -407,7 +404,7 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
         return
       }
       // Determine if this is an edit operation
-      const isEdit = slug && slug.trim() !== ''
+      const isEdit = slug && slug.trim() !== ""
 
       // Use the combined function for both create and edit operations
       const result = await handleJekyllPost(slug, title, description, fileName, fileData, fileType, userCookie)
@@ -422,7 +419,7 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
           postUrl: result.postUrl,
           githubUrl: result.githubUrl,
           submittedAt: new Date().toISOString(),
-          operation: isEdit ? 'update' : 'create'
+          operation: isEdit ? "update" : "create",
         },
       })
     } catch (error) {
@@ -434,7 +431,6 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
     }
   })
 })
-    }
 
 // Submit comment function (for adding comments to blog posts) - refactored to use single commit
 exports.submitComment = functions.region("asia-south1").https.onRequest((req, res) => {
