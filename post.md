@@ -171,9 +171,10 @@ title: Create New Post
             let content = frontMatterMatch[2];
             
             // Extract title from front matter
-            const titleMatch = frontMatter.match(/title:\s*["']?(.*?)["']?\s*$/m);
+            // Extract title from front matter - handle both quoted and unquoted titles
+            const titleMatch = frontMatter.match(/title:\s*["']?([^"'\n]+?)["']?\s*$/m);
             if (titleMatch) {
-                document.getElementById('title').value = titleMatch[1];
+                document.getElementById('title').value = titleMatch[1].trim();
             }
             
             // Extract and handle existing images
