@@ -187,8 +187,6 @@ title: Create New Post
             if (document.getElementById('file').files[0]) {
                 formData.append('file', document.getElementById('file').files[0]);
             }
-                formData.append('file', document.getElementById('file').files[0]);
-            }
 
             // Submit to Firebase function
             // Submit to Firebase function
