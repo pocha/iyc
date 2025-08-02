@@ -13,8 +13,6 @@ title: Create New Post
             Create a new post and share your thoughts with the community
         </p>
     </div>
-        </p>
-    </div>
 
     <!-- Form Container -->
     <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
@@ -107,7 +105,6 @@ title: Create New Post
     </div>
 
 </div>
-
 
 <script src="{{ '/assets/js/cookie-manager.js' | relative_url }}"></script>
 
