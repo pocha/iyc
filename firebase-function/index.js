@@ -246,6 +246,14 @@ async function handleJekyllPost(slug, title, description, fileName, fileContent,
         })
         existingFile = response.data
         existingContent = Buffer.from(existingFile.content, 'base64').toString('utf-8')
+
+      // Check if the user cookie matches the one in the existing post
+      const cookieMatch = existingContent.match(/user_cookie:\s*(.+)/)
+      const existingCookie = cookieMatch ? cookieMatch[1].trim() : null
+
+      if (existingCookie !== userCookie) {
+        throw new Error('Unauthorized: You can only edit posts you created')
+      }
       } catch (error) {
         if (error.status === 404) {
           throw new Error(`Post not found: ${slug}`)
