@@ -118,6 +118,7 @@ layout: default
       </div>
     </div>
 
+    <script src="{{ '/assets/js/cookie-manager.js' | relative_url }}"></script>
     <script>
       document.getElementById('commentForm').addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -226,15 +227,6 @@ document.addEventListener('keydown', function(event) {
 
 // Post Owner Management
 document.addEventListener('DOMContentLoaded', function() {
-  // Get or create user cookie
-  function getUserCookie() {
-    let userCookie = localStorage.getItem('forumUserCookie');
-    if (userCookie === null || userCookie === undefined) {
-      userCookie = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem('forumUserCookie', userCookie);
-    }
-    return userCookie;
-  }
 
   // Check if current user is post owner
   function checkPostOwnership() {
@@ -245,7 +237,6 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('postOwnerActions').style.display = 'block';
     }
   }
-
   // Initialize post ownership check
   checkPostOwnership();
 
