@@ -62,7 +62,7 @@ title: Whats up IYC
 <script>
   // Show edit buttons for posts owned by current user
   function showEditButtons() {
-    const currentUserCookie = getOrSetUserCookie()
+    const currentUserCookie = getCookie()
     if (!currentUserCookie) return
 
     const editButtons = document.querySelectorAll(".edit-post-btn")
@@ -81,7 +81,6 @@ title: Whats up IYC
 
   // Initialize on page load
   document.addEventListener("DOMContentLoaded", function () {
-    getOrSetUserCookie()
     showEditButtons()
   })
 </script>

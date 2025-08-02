@@ -4,9 +4,9 @@
  */
 
 // Cookie management functions
-function getCookie(name) {
+function getCookie() {
   const value = "; " + document.cookie
-  const parts = value.split("; " + name + "=")
+  const parts = value.split(";forum-user-id=")
   if (parts.length === 2) return parts.pop().split(";").shift()
   return null
 }
@@ -23,7 +23,7 @@ function generateUserCookie() {
 
 // Initialize and get user cookie (main function used across the forum)
 function getOrSetUserCookie() {
-  let userCookie = getCookie("forum_user_id")
+  let userCookie = getCookie()
   if (!userCookie) {
     userCookie = generateUserCookie()
     setCookie("forum_user_id", userCookie, 365) // Set for 1 year
