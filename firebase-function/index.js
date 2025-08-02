@@ -346,6 +346,15 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       // Extract user cookie from request headers
       const userCookie = req.headers["x-user-cookie"] || req.headers["cookie"]?.match(/userCookie=([^;]+)/)?.[1] || null
 
+
+      // Validate that cookie is present (mandatory for post creation)
+      if (!userCookie) {
+        res.status(401).json({
+          success: false,
+          error: "User cookie is required to create a post. Please ensure you have a valid session.",
+        })
+        return
+      }
       // Validate required fields
       if (!title || !description) {
         res.status(400).json({
