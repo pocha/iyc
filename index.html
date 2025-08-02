@@ -76,7 +76,7 @@ title: Whats up IYC
 
   // Edit post function
   function editPost(slug, title, content) {
-    alert("Edit functionality will be implemented when post creation form is ready.\nPost: " + title)
+    window.location.href = `/post.html?edit=true&slug=${slug}`
   }
 
   // Initialize on page load

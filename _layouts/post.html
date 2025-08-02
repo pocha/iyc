@@ -205,7 +205,8 @@ layout: default
     // Edit post functionality
     document.getElementById("editPostBtn").addEventListener("click", function () {
       const currentUrl = window.location.pathname
-      const editUrl = currentUrl.replace("/posts/", "/edit/")
+      const postSlug = "{{ page.slug }}"
+      const editUrl = `/post.html?edit=true&slug=${postSlug}`
       window.location.href = editUrl
     })
 
