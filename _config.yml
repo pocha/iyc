@@ -3,7 +3,7 @@ description: 'Community of Ishaites to share information, giveaway items and ask
 baseurl: '/iyc'
 url: ''
 github_user: 'pocha'
-github_branch: 'nonbios-jekyll'
+github_branch: 'master'
 
 markdown: kramdown
 highlighter: rouge
@@ -28,9 +28,9 @@ defaults:
 
 # Exclude image files from processing
 exclude:
-  - "**/*.png"
-  - "**/*.jpg"
-  - "**/*.jpeg"
-  - "**/*.gif"
-  - "**/*.svg"
-  - "**/*.webp"
+  - '**/*.png'
+  - '**/*.jpg'
+  - '**/*.jpeg'
+  - '**/*.gif'
+  - '**/*.svg'
+  - '**/*.webp'
