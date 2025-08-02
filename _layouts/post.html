@@ -205,7 +205,7 @@ layout: default
     document.getElementById("editPostBtn").addEventListener("click", function () {
       const postSlug = "{{ page.slug }}"
       const postDate = '{{ page.date | date: "%Y-%m-%d" }}'
-      const editUrl = `/post.html?edit=true&date=${postDate}&slug=${postSlug}`
+      const editUrl = `/iyc/post.html?edit=true&date=${postDate}&slug=${postSlug}`
       window.location.href = editUrl
     })
 
