@@ -456,7 +456,7 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       const { title, description, slug } = fields
 
       // Extract user cookie from request headers
-      const userCookie = req.headers["x-user-cookie"] || req.headers["cookie"]?.match(/userCookie=([^;]+)/)?.[1] || null
+      const userCookie = req.headers["x-user-cookie"] || req.headers["cookie"]?.match(/forum_user_id=([^;]+)/)?.[1] || null
 
 
       // Validate that cookie is present (mandatory for post creation/editing)
