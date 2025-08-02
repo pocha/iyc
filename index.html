@@ -62,7 +62,7 @@ title: Whats up IYC
 <script>
   // Show edit buttons for posts owned by current user
   function showEditButtons() {
-    const currentUserCookie = getCookie()
+    const currentUserCookie = getOrSetUserCookie()
     if (!currentUserCookie) return
 
     const editButtons = document.querySelectorAll(".edit-post-btn")
