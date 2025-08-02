@@ -184,14 +184,19 @@ title: Create New Post
             const formData = new FormData();
             formData.append('title', document.getElementById('title').value);
             formData.append('description', document.getElementById('description').value);
-            formData.append('userCookie', userCookie);
             if (document.getElementById('file').files[0]) {
+                formData.append('file', document.getElementById('file').files[0]);
+            }
                 formData.append('file', document.getElementById('file').files[0]);
             }
 
             // Submit to Firebase function
+            // Submit to Firebase function
             const response = await fetch(FIREBASE_FUNCTION_URL, {
                 method: 'POST',
+                headers: {
+                    'Cookie': `userCookie=${userCookie}`
+                },
                 body: formData
             });
 
