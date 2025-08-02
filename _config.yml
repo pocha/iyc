@@ -2,6 +2,8 @@ title: 'Whats up Isha'
 description: 'Community of Ishaites to share information, giveaway items and ask questions'
 baseurl: '/iyc'
 url: ''
+github_user: 'pocha'
+github_branch: 'nonbios-jekyll'
 
 markdown: kramdown
 highlighter: rouge

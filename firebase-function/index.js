@@ -225,32 +225,78 @@ async function createSingleCommit(files, commitMessage) {
 }
 
 // Function to create Jekyll post using single commit
-async function createJekyllPost(title, description, fileName, fileContent, fileType) {
+// Combined function to handle both create and update Jekyll post operations
+async function handleJekyllPost(slug, title, description, fileName, fileContent, fileType, userCookie) {
   try {
-    const now = new Date()
-    const dateStr = now.toISOString().split("T")[0] // YYYY-MM-DD format
-    const timeStr = now.toISOString()
+    const isEdit = slug && slug.trim() !== ""
+    let postSlug, postDate, postDirPath, blogFilePath, commitMessage
 
-    // Create slug from title
-    const slug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, "")
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-")
-      .trim("-")
+    if (isEdit) {
+      // EDIT OPERATION: Fetch existing post content to verify ownership
+      // Directly construct the path using the slug pattern
+      blogFilePath = `_posts/${slug}/index.md`
 
-    // Create directory name for the blog post
-    const postDirName = `${dateStr}-${slug}`
-    const postDirPath = `_posts/${postDirName}`
-    const blogFilePath = `${postDirPath}/index.md`
+      // Get the existing post content to verify user ownership
+      let existingFile, existingContent
+      try {
+        const response = await octokit.rest.repos.getContent({
+          owner: GITHUB_OWNER,
+          repo: GITHUB_REPO,
+          path: blogFilePath,
+          ref: GITHUB_BRANCH,
+        })
+        existingFile = response.data
+        existingContent = Buffer.from(existingFile.content, "base64").toString("utf-8")
 
-    // Create Jekyll front matter and content
+        // Check if the user cookie matches the one in the existing post
+        const cookieMatch = existingContent.match(/user_cookie:\s*(.+)/)
+        const existingCookie = cookieMatch ? cookieMatch[1].trim() : null
+
+        if (existingCookie !== userCookie) {
+          throw new Error("Unauthorized: You can only edit posts you created")
+        }
+      } catch (error) {
+        if (error.status === 404) {
+          throw new Error(`Post not found: ${slug}`)
+        }
+        throw new Error("Unauthorized: You can only edit posts you created")
+      }
+
+      // Extract existing date to preserve it
+      const dateMatch = existingContent.match(/date:\s*(.+)/)
+      postDate = dateMatch ? dateMatch[1].trim() : new Date().toISOString()
+      postSlug = slug
+      postDirPath = `_posts/${slug}`
+      commitMessage = `Update blog post: ${title}`
+    } else {
+      // CREATE OPERATION: Create new post
+      const now = new Date()
+      const dateStr = now.toISOString().split("T")[0] // YYYY-MM-DD format
+      postDate = now.toISOString()
+
+      // Create slug from title
+      postSlug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .trim("-")
+
+      // Create directory name for the blog post
+      const postDirName = `${dateStr}-${postSlug}`
+      postDirPath = `_posts/${postDirName}`
+      blogFilePath = `${postDirPath}/index.md`
+      commitMessage = `Create new blog post: ${title}`
+    }
+
+    // COMMON LOGIC: Create Jekyll front matter and content
     let postContent = `---
 layout: post
 title: "${title}"
-date: ${timeStr}
+date: ${postDate}
 author: Anonymous
-slug: ${slug}
+slug: ${postSlug}
+user_cookie: ${userCookie || "anonymous"}
 ---
 
 ${description}
@@ -258,17 +304,18 @@ ${description}
 `
 
     // Prepare files for single commit
-    const filesToCreate = []
+    const filesToProcess = []
 
     // Always add the blog.md file
-    filesToCreate.push({
+    filesToProcess.push({
       path: blogFilePath,
       content: postContent,
       encoding: "utf-8",
     })
-    // Only add image file if it exists
+
+    // Handle image if provided
     if (fileName && fileContent && fileType && fileType.startsWith("image/")) {
-      const imageFileName = `${dateStr}-${slug}-${fileName}`
+      const imageFileName = isEdit ? `${postSlug}-${fileName}` : `${postDate.split("T")[0]}-${postSlug}-${fileName}`
       const imagePath = `${postDirPath}/${imageFileName}`
 
       // Add image reference to post content
@@ -277,29 +324,31 @@ ${description}
 `
 
       // Update the blog.md content with image reference
-      filesToCreate[0].content = postContent
+      filesToProcess[0].content = postContent
 
-      content: fileContent.toString("base64"),
-        filesToCreate.push({
-          path: imagePath,
-          content: Buffer.from(fileContent).toString("base64"),
-          encoding: "base64",
-        })
+      // Add image file
+      filesToProcess.push({
+        path: imagePath,
+        content: Buffer.from(fileContent).toString("base64"),
+        encoding: "base64",
+      })
     }
 
     // Use the generic single commit function
-    const result = await createSingleCommit(filesToCreate, `Add new blog post: ${title}`)
+    const result = await createSingleCommit(filesToProcess, commitMessage)
 
+    // Extract date components for URL
+    const dateObj = new Date(postDate)
     return {
       success: true,
-      postUrl: `http://20.42.15.153:4001/iyc/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(
+      postUrl: `http://20.42.15.153:4001/iyc/${dateObj.getFullYear()}/${String(dateObj.getMonth() + 1).padStart(
         2,
         "0"
-      )}/${String(now.getDate()).padStart(2, "0")}/${slug}.html`,
+      )}/${String(dateObj.getDate()).padStart(2, "0")}/${postSlug}.html`,
       githubUrl: result.githubUrl,
     }
   } catch (error) {
-    console.error("Error creating Jekyll post:", error)
+    console.error("Error handling Jekyll post:", error)
     throw error
   }
 }
@@ -340,30 +389,37 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       })
 
       // Extract form data
-      const { title, description } = fields
+      const { title, description, slug } = fields
 
-      // Validate required fields
-      if (!title || !description) {
-        res.status(400).json({
+      // Extract user cookie from request headers
+      const userCookie =
+        req.headers["x-user-cookie"] || req.headers["cookie"]?.match(/forum_user_id=([^;]+)/)?.[1] || null
+
+      // Validate that cookie is present (mandatory for post creation/editing)
+      if (!userCookie) {
+        res.status(401).json({
           success: false,
-          error: "Title and description are required fields.",
+          error: "User cookie is required to create or edit a post. Please ensure you have a valid session.",
         })
         return
       }
+      // Determine if this is an edit operation
+      const isEdit = slug && slug.trim() !== ""
 
-      // Use the createJekyllPost function - pass raw fileData for images
-      const result = await createJekyllPost(title, description, fileName, fileData, fileType)
+      // Use the combined function for both create and edit operations
+      const result = await handleJekyllPost(slug, title, description, fileName, fileData, fileType, userCookie)
 
       // Send success response
       res.status(200).json({
         success: true,
-        message: "Blog post submitted successfully!",
+        message: isEdit ? "Blog post updated successfully!" : "Blog post submitted successfully!",
         data: {
           title: title,
           description: description,
           postUrl: result.postUrl,
           githubUrl: result.githubUrl,
           submittedAt: new Date().toISOString(),
+          operation: isEdit ? "update" : "create",
         },
       })
     } catch (error) {
