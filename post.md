@@ -6,11 +6,13 @@ title: Create New Post
 <div class="max-w-4xl mx-auto">
     <!-- Page Header -->
     <div class="text-center mb-8">
-        <h1 class="text-4xl font-bold text-orange-600 mb-4">
+        <h1 id="pageTitle" class="text-4xl font-bold text-orange-600 mb-4">
             ✨ Share Your Ideas ✨
         </h1>
-        <p class="text-xl text-gray-600">
+        <p id="pageSubtitle" class="text-xl text-gray-600">
             Create a new post and share your thoughts with the community
+        </p>
+    </div>
         </p>
     </div>
 
@@ -80,7 +82,7 @@ title: Create New Post
                     id="submitBtn"
                     class="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-orange-300"
                 >
-                    <span id="submitText">🚀 Create Post</span>
+                    <span id="submitText">🚀 <span id="submitAction">Create Post</span></span>
                     <span id="loadingText" class="hidden">⏳ Creating...</span>
                 </button>
                 <a href="/" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-4 px-8 rounded-xl text-lg text-center transition-all duration-300">
@@ -107,6 +109,8 @@ title: Create New Post
 </div>
 
 
+<script src="{{ '/assets/js/cookie-manager.js' | relative_url }}"></script>
+
 <script>
     // Firebase Function URL - Replace with your actual Firebase function URL
     const FIREBASE_FUNCTION_URL = 'https://asia-south1-isocnet-2d37f.cloudfunctions.net/submitForm';
@@ -121,6 +125,62 @@ title: Create New Post
     // Click to upload
     fileUploadArea.addEventListener('click', () => {
         fileInput.click();
+
+    // Edit functionality - detect edit mode and populate form
+    function initializeEditMode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const editMode = urlParams.get('edit');
+        const postSlug = urlParams.get('slug');
+        
+        if (editMode === 'true' && postSlug) {
+            // Update page title and subtitle for edit mode
+            document.getElementById('pageTitle').textContent = '✏️ Edit Your Post';
+            document.getElementById('pageSubtitle').textContent = 'Update your post and share your revised thoughts';
+            document.getElementById('submitAction').textContent = 'Update Post';
+            
+            // Load existing post data
+            loadPostForEdit(postSlug);
+        }
+    }
+    
+    async function loadPostForEdit(postSlug) {
+        try {
+            // Fetch the post markdown file from GitHub
+            const response = await fetch(`/_posts/${postSlug}.md`);
+            if (response.ok) {
+                const postContent = await response.text();
+                parseAndPopulateForm(postContent);
+            } else {
+                throw new Error('Could not load post for editing');
+            }
+        } catch (error) {
+            console.error('Error loading post for edit:', error);
+            document.getElementById('errorText').textContent = 'Could not load post for editing: ' + error.message;
+            document.getElementById('errorMessage').classList.remove('hidden');
+        }
+    }
+    
+    function parseAndPopulateForm(postContent) {
+        // Parse the markdown front matter and content
+        const frontMatterMatch = postContent.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+        if (frontMatterMatch) {
+            const frontMatter = frontMatterMatch[1];
+            const content = frontMatterMatch[2];
+            
+            // Extract title from front matter
+            const titleMatch = frontMatter.match(/title:\s*["']?(.*?)["']?\s*$/m);
+            if (titleMatch) {
+                document.getElementById('title').value = titleMatch[1];
+            }
+            
+            // Set description as the content
+            document.getElementById('description').value = content.trim();
+        }
+    }
+    
+    // Initialize edit mode on page load
+    document.addEventListener('DOMContentLoaded', initializeEditMode);
+
     });
 
     // File selection
