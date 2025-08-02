@@ -6,7 +6,7 @@
 // Cookie management functions
 function getCookie() {
   const value = "; " + document.cookie
-  const parts = value.split(";forum_user_id=")
+  const parts = value.split("; forum_user_id=")
   if (parts.length === 2) return parts.pop().split(";").shift()
   return null
 }
