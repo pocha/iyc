@@ -148,7 +148,7 @@ title: Create New Post
     async function loadPostForEdit(postSlug) {
         try {
             // Fetch the post markdown file directly from GitHub raw content
-            const githubUrl = `https://raw.githubusercontent.com/pocha/iyc/nonbios-jekyll/_posts/${postSlug}/index.md`;
+            const githubUrl = `https://raw.githubusercontent.com/{{ site.github_user }}{{ site.baseurl }}/{{ site.github_branch }}/_posts/${postSlug}/index.md`;
             const response = await fetch(githubUrl);
             if (response.ok) {
                 const postContent = await response.text();
