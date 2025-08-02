@@ -106,7 +106,6 @@ title: Create New Post
 
 </div>
 
-<script src="cookie-manager.js"></script>
 
 <script>
     // Firebase Function URL - Replace with your actual Firebase function URL
