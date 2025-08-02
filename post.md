@@ -162,7 +162,6 @@ title: Create New Post
             document.getElementById('errorMessage').classList.remove('hidden');
         }
     }
-    }
     
     function parseAndPopulateForm(postContent, postSlug) {
         // Parse the markdown front matter and content
