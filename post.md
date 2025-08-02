@@ -106,6 +106,8 @@ title: Create New Post
 
 </div>
 
+<script src="cookie-manager.js"></script>
+
 <script>
     // Firebase Function URL - Replace with your actual Firebase function URL
     const FIREBASE_FUNCTION_URL = 'https://asia-south1-isocnet-2d37f.cloudfunctions.net/submitForm';
@@ -175,10 +177,14 @@ title: Create New Post
         errorMessage.classList.add('hidden');
 
         try {
+            // Get or set user cookie
+            const userCookie = getOrSetUserCookie();
+            
             // Prepare form data
             const formData = new FormData();
             formData.append('title', document.getElementById('title').value);
             formData.append('description', document.getElementById('description').value);
+            formData.append('userCookie', userCookie);
             if (document.getElementById('file').files[0]) {
                 formData.append('file', document.getElementById('file').files[0]);
             }
