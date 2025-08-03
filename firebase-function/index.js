@@ -546,7 +546,6 @@ image: ${imageUrl}`
     }
   })
 })
-
 // Delete Post Function
 exports.deletePost = functions.region("asia-south1").https.onRequest(async (req, res) => {
   return corsHandler(req, res, async () => {
@@ -585,14 +584,10 @@ exports.deletePost = functions.region("asia-south1").https.onRequest(async (req,
       const { data: treeData } = await octokit.rest.git.getTree({
         owner: GITHUB_OWNER,
         repo: GITHUB_REPO,
-      // Create array of files to delete by targeting specific paths
-      const filesToDelete = []
-        repo: GITHUB_REPO,
-        base_tree: currentSha,
-        tree: treeItemsToDelete,
+        tree_sha: currentSha,
+        recursive: true,
       })
 
-      // Filter out files to delete
       // Create array of files to delete by targeting specific paths
       const filesToDelete = []
 
@@ -602,29 +597,23 @@ exports.deletePost = functions.region("asia-south1").https.onRequest(async (req,
 
       treeData.tree.forEach((item) => {
         if (item.path.startsWith(postDirPath + "/") || item.path.startsWith(commentDirPath + "/")) {
-          filesToDelete.push(item.path)
+          filesToDelete.push({
+            path: item.path,
+            mode: "100644",
+            type: "blob",
+            sha: null, // This marks the file for deletion
+          })
         }
       })
 
-      console.log(`Files to delete: ${filesToDelete.join(", ")}`)
+      console.log(`Files to delete: ${filesToDelete.map(f => f.path).join(", ")}`)
 
-      // Create new tree by excluding the specific files to delete
-      const newTreeItems = treeData.tree
-        .filter((item) => !filesToDelete.includes(item.path))
-        .map((item) => ({
-          path: item.path,
-          mode: item.mode,
-          type: item.type,
-          sha: item.sha,
-        }))
-
-      // Create new tree without the deleted files
-      // Create new tree without the deleted files
+      // Create new tree with files marked for deletion
       const { data: newTree } = await octokit.rest.git.createTree({
         owner: GITHUB_OWNER,
         repo: GITHUB_REPO,
         base_tree: currentSha,
-        tree: newTreeItems,
+        tree: filesToDelete,
       })
 
       // Create new commit
@@ -647,6 +636,24 @@ exports.deletePost = functions.region("asia-south1").https.onRequest(async (req,
       const githubUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/commit/${newCommit.sha}`
 
       // Send success response
+      res.status(200).json({
+        success: true,
+        message: "Post deleted successfully!",
+        data: {
+          postSlug: postSlug,
+          githubUrl: githubUrl,
+          deletedAt: new Date().toISOString(),
+        },
+      })
+    } catch (error) {
+      console.error("Error in deletePost:", error)
+      res.status(500).json({
+        success: false,
+        error: error.message || "An unexpected error occurred while deleting the post.",
+      })
+    }
+  })
+})
       res.status(200).json({
         success: true,
         message: "Post deleted successfully!",
