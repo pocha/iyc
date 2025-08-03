@@ -581,13 +581,12 @@ exports.deletePost = functions.region("asia-south1").https.onRequest(async (req,
 
       const currentSha = refData.object.sha
 
-      // Get current tree
-      const { data: treeData } = await octokit.rest.git.getTree({
+      })
         owner: GITHUB_OWNER,
         repo: GITHUB_REPO,
         tree_sha: currentSha,
         recursive: true,
-      // Filter out files to delete
+      
       // Create array of files to delete by targeting specific paths
       const filesToDelete = []
 
@@ -596,11 +595,15 @@ exports.deletePost = functions.region("asia-south1").https.onRequest(async (req,
       const commentFilePath = `_data/comments/${postSlug}.yml`
 
       treeData.tree.forEach((item) => {
-        if (item.path === postFilePath || item.path === commentFilePath) {
+      
+      // Also check for blog directory files
+      const blogDirPath = `blog/${postSlug}`
+      
+      treeData.tree.forEach((item) => {
+        if (item.path.startsWith(blogDirPath + "/")) {
           filesToDelete.push(item.path)
         }
       })
-        if (item.path.startsWith(postDirPath + "/") || item.path.startsWith(commentDirPath + "/")) {
           filesToDelete.push(item.path)
         }
       })
@@ -614,9 +617,7 @@ exports.deletePost = functions.region("asia-south1").https.onRequest(async (req,
         type: "blob",
         sha: null,
       }))
-
-      console.log(`Creating tree to delete ${treeItemsToDelete.length} files`)
-
+      })
       // Create new tree with files to delete (sha: null)
       const { data: newTree } = await octokit.rest.git.createTree({
         owner: GITHUB_OWNER,
