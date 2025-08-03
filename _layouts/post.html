@@ -214,13 +214,43 @@ layout: default
       if (confirm("Are you sure you want to delete this post? This action cannot be undone.")) {
         const postSlug = "{{ page.slug }}"
         const postDate = '{{ page.date | date: "%Y-%m-%d" }}'
+        const fullPostSlug = `${postDate}-${postSlug}`
 
-        // Here you would implement the delete functionality
-        // For now, we will show an alert
-        alert("Delete functionality will be implemented in the backend.")
+        // Show loading state
+        const deleteBtn = document.getElementById("deletePostBtn")
+        const originalText = deleteBtn.innerHTML
+        deleteBtn.innerHTML = '<svg class="w-4 h-4 inline mr-1 animate-spin" fill="currentColor" viewBox="0 0 20 20"><path d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2H4z"></path></svg>Deleting...'
+        deleteBtn.disabled = true
+
+        // Call Firebase delete function
+        fetch('https://asia-south1-isocnet-2d37f.cloudfunctions.net/deletePost', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            postSlug: fullPostSlug
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Post deleted successfully!')
+            // Redirect to home page
+            window.location.href = '{{ site.baseurl }}/'
+          } else {
+            throw new Error(data.error || 'Failed to delete post')
+          }
+        })
+        .catch(error => {
+          console.error('Error deleting post:', error)
+          alert('Error deleting post: ' + error.message)
+          // Restore button state
+          deleteBtn.innerHTML = originalText
+          deleteBtn.disabled = false
+        })
       }
     })
-
     // Initialize post ownership check
     revealEditDeleteButtonIfRequired()
   })
