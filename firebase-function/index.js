@@ -581,50 +581,49 @@ exports.deletePost = functions.region("asia-south1").https.onRequest(async (req,
 
       const currentSha = refData.object.sha
 
-      })
+      // Get current tree
+      const { data: treeData } = await octokit.rest.git.getTree({
         owner: GITHUB_OWNER,
         repo: GITHUB_REPO,
-        tree_sha: currentSha,
-        recursive: true,
-      
+      // Create array of files to delete by targeting specific paths
+      const filesToDelete = []
+        repo: GITHUB_REPO,
+        base_tree: currentSha,
+        tree: treeItemsToDelete,
+      })
+
+      // Filter out files to delete
       // Create array of files to delete by targeting specific paths
       const filesToDelete = []
 
-      // Add post file and comment file
-      const postFilePath = `_posts/${postSlug}.md`
-      const commentFilePath = `_data/comments/${postSlug}.yml`
+      // Add post directory files
+      const postDirPath = `_posts/${postSlug}`
+      const commentDirPath = `_data/comments/${postSlug}`
 
       treeData.tree.forEach((item) => {
-      
-      // Also check for blog directory files
-      const blogDirPath = `blog/${postSlug}`
-      
-      treeData.tree.forEach((item) => {
-        if (item.path.startsWith(blogDirPath + "/")) {
-          filesToDelete.push(item.path)
-        }
-      })
+        if (item.path.startsWith(postDirPath + "/") || item.path.startsWith(commentDirPath + "/")) {
           filesToDelete.push(item.path)
         }
       })
 
       console.log(`Files to delete: ${filesToDelete.join(", ")}`)
 
-      // Create tree items for files to delete with sha: null
-      const treeItemsToDelete = filesToDelete.map((filePath) => ({
-        path: filePath,
-        mode: "100644",
-        type: "blob",
-        sha: null,
-      }))
-      })
-      // Create new tree with files to delete (sha: null)
+      // Create new tree by excluding the specific files to delete
+      const newTreeItems = treeData.tree
+        .filter((item) => !filesToDelete.includes(item.path))
+        .map((item) => ({
+          path: item.path,
+          mode: item.mode,
+          type: item.type,
+          sha: item.sha,
+        }))
+
+      // Create new tree without the deleted files
+      // Create new tree without the deleted files
       const { data: newTree } = await octokit.rest.git.createTree({
         owner: GITHUB_OWNER,
         repo: GITHUB_REPO,
         base_tree: currentSha,
-        tree: treeItemsToDelete,
-      })
         tree: newTreeItems,
       })
 
