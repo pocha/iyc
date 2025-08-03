@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page.title | default: site.title }}</title>
+    <link rel="icon" href="{{ site.baseurl }}/assets/images/favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 	<style>
@@ -40,7 +41,7 @@
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-6">
                     <div class="w-12 h-12 flex items-center justify-center">
-                        <img src="https://www.shutterstock.com/image-vector/adiyogithe-source-yoga-vector-illustration-600nw-2485006149.jpg" 
+			<img src="{{ site.baseurl}}/assets/images/shiva.jpg" 
                              alt="Shiva Logo" 
                              class="w-20 h-20 object-contain" style="max-width: 100px !important">
                     </div>
