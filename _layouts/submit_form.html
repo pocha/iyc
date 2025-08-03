@@ -118,6 +118,7 @@ layout: default
 
     if (editMode === "true" && postDate && postSlug) {
       // Update page title and subtitle for edit mode
+      document.title = "Edit Post"
       document.getElementById("pageTitle").textContent = "✏️ Edit Your Post"
       document.getElementById("pageSubtitle").textContent = "Update your post and share your revised thoughts"
       document.getElementById("submitAction").textContent = "Update Post"

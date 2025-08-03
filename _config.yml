@@ -19,6 +19,7 @@ defaults:
       path: ''
       type: 'posts'
     values:
+      permalink: /post/:title/
       layout: 'post'
   - scope:
       path: ''
@@ -26,11 +27,4 @@ defaults:
     values:
       layout: 'topic'
 
-# Exclude image files from processing
-exclude:
-  - '**/*.png'
-  - '**/*.jpg'
-  - '**/*.jpeg'
-  - '**/*.gif'
-  - '**/*.svg'
-  - '**/*.webp'
+# Note: Removed image file exclusions to allow assets/images/ to be processed
