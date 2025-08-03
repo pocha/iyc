@@ -616,9 +616,11 @@ exports.deletePost = functions.region("asia-south1").https.onRequest(async (req,
         }))
 
       // Create new tree without the deleted files
+      // Create new tree without the deleted files
       const { data: newTree } = await octokit.rest.git.createTree({
         owner: GITHUB_OWNER,
         repo: GITHUB_REPO,
+        base_tree: currentSha,
         tree: newTreeItems,
       })
 
