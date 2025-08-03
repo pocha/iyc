@@ -607,22 +607,23 @@ exports.deletePost = functions.region("asia-south1").https.onRequest(async (req,
 
       console.log(`Files to delete: ${filesToDelete.join(", ")}`)
 
-      // Create new tree by excluding the specific files to delete
-      const newTreeItems = treeData.tree
-        .filter((item) => !filesToDelete.includes(item.path))
-        .map((item) => ({
-          path: item.path,
-          mode: item.mode,
-          type: item.type,
-          sha: item.sha,
-        }))
+      // Create tree items for files to delete with sha: null
+      const treeItemsToDelete = filesToDelete.map((filePath) => ({
+        path: filePath,
+        mode: "100644",
+        type: "blob",
+        sha: null,
+      }))
 
-      // Create new tree without the deleted files
-      // Create new tree without the deleted files
+      console.log(`Creating tree to delete ${treeItemsToDelete.length} files`)
+
+      // Create new tree with files to delete (sha: null)
       const { data: newTree } = await octokit.rest.git.createTree({
         owner: GITHUB_OWNER,
         repo: GITHUB_REPO,
         base_tree: currentSha,
+        tree: treeItemsToDelete,
+      })
         tree: newTreeItems,
       })
 
