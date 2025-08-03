@@ -587,17 +587,19 @@ exports.deletePost = functions.region("asia-south1").https.onRequest(async (req,
         repo: GITHUB_REPO,
         tree_sha: currentSha,
         recursive: true,
-      })
-
       // Filter out files to delete
       // Create array of files to delete by targeting specific paths
       const filesToDelete = []
 
-      // Add post directory files
-      const postDirPath = `_posts/${postSlug}`
-      const commentDirPath = `_data/comments/${postSlug}`
+      // Add post file and comment file
+      const postFilePath = `_posts/${postSlug}.md`
+      const commentFilePath = `_data/comments/${postSlug}.yml`
 
       treeData.tree.forEach((item) => {
+        if (item.path === postFilePath || item.path === commentFilePath) {
+          filesToDelete.push(item.path)
+        }
+      })
         if (item.path.startsWith(postDirPath + "/") || item.path.startsWith(commentDirPath + "/")) {
           filesToDelete.push(item.path)
         }
