@@ -1,5 +1,14 @@
 const functions = require("firebase-functions")
-const { corsHandler, octokit, GITHUB_OWNER, GITHUB_REPO, GITHUB_BRANCH, parseMultipartData, createSingleCommit } = require("./library")
+const {
+  corsHandler,
+  octokit,
+  GITHUB_TOKEN,
+  GITHUB_OWNER,
+  GITHUB_REPO,
+  GITHUB_BRANCH,
+  parseMultipartData,
+  createSingleCommit,
+} = require("./library")
 
 exports.submitComment = functions.region("asia-south1").https.onRequest((req, res) => {
   return corsHandler(req, res, async () => {

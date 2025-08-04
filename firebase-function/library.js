@@ -315,7 +315,7 @@ ${description}
 
     // Handle image logic - preserve existing images during edit if no new image provided
     let hasNewImage = fileName && fileContent && fileType && fileType.startsWith("image/")
-    
+
     if (hasNewImage) {
       // New image provided
       const imageFileName = isEdit ? `${postSlug}-${fileName}` : `${postDate.split("T")[0]}-${postSlug}-${fileName}`
@@ -368,9 +368,10 @@ module.exports = {
   corsHandler,
   parseMultipartData,
   octokit,
+  GITHUB_TOKEN,
   GITHUB_OWNER,
   GITHUB_REPO,
   GITHUB_BRANCH,
   createSingleCommit,
-  handleJekyllPost
+  handleJekyllPost,
 }
