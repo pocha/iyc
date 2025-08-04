@@ -119,7 +119,7 @@ const getOrCreateUserCookie = (existingCookie) => {
 }
 
 // Generic function to create a single commit with multiple files
-async function createSingleCommit(files, commitMessage) {
+async function createSingleCommit(filesToProcess, commitMessage) {
   try {
     // Get the latest commit SHA from the target branch
     const { data: refData } = await octokit.rest.git.getRef({
@@ -139,13 +139,50 @@ async function createSingleCommit(files, commitMessage) {
 
     const baseTreeSha = commitData.tree.sha
 
-    // Create tree with all files
-    const tree = files.map((file) => ({
-      path: file.path,
-      mode: "100644",
-      type: "blob",
-      content: file.encoding === "base64" ? Buffer.from(file.content, "base64").toString("utf-8") : file.content,
-    }))
+    // Create tree with all file operations (create/update/delete)
+    const tree = []
+    
+    // Handle file operations
+    if (filesToProcess.files && filesToProcess.files.length > 0) {
+      for (const file of filesToProcess.files) {
+        if (file.encoding === "base64") {
+          // For binary files, create blob first
+          const { data: blobData } = await octokit.rest.git.createBlob({
+            owner: GITHUB_OWNER,
+            repo: GITHUB_REPO,
+            content: file.content,
+            encoding: "base64",
+          })
+          
+          tree.push({
+            path: file.path,
+            mode: "100644",
+            type: "blob",
+            sha: blobData.sha,
+          })
+        } else {
+          // For text files, use content directly
+          tree.push({
+            path: file.path,
+            mode: "100644",
+            type: "blob",
+            content: file.content,
+          })
+        }
+      }
+    }
+    
+    // Handle file deletions
+    if (filesToProcess.deleteFiles && filesToProcess.deleteFiles.length > 0) {
+      for (const filePath of filesToProcess.deleteFiles) {
+        tree.push({
+          path: filePath,
+          mode: "100644",
+          type: "blob",
+          sha: null, // null sha means delete the file
+        })
+      }
+    }
 
     const { data: treeData } = await octokit.rest.git.createTree({
       owner: GITHUB_OWNER,
