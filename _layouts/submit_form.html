@@ -12,9 +12,11 @@ layout: default
   <!-- Form Container -->
   <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
     <form id="submissionForm" enctype="multipart/form-data" class="space-y-6">
+      <!-- Hidden fields for edit mode -->
+      <input type="hidden" id="slug" name="slug" value="" />
+      <input type="hidden" id="deletedFiles" name="deletedFiles" value="" />
+      
       <!-- Title Field -->
-      <!-- Hidden field for edit mode -->
-      <input type="hidden" id="postSlug" name="postSlug" value="" />
       <div class="group">
         <label for="title" class="block text-gray-400 text-lg font-medium mb-2"> 🎯 Post Title </label>
         <input
@@ -36,25 +38,32 @@ layout: default
           rows="6"
           class="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:bg-white transition-all duration-300 text-lg resize-none"
         ></textarea>
+        
+        <!-- Existing Images Container (for edit mode) -->
+        <div id="existingImagesContainer" class="mt-4 hidden">
+          <h4 class="text-gray-600 font-medium mb-2">📷 Current Images:</h4>
+          <div id="existingImagesList" class="flex flex-wrap gap-3"></div>
+        </div>
       </div>
 
-      <!-- File Upload Field -->
+      <!-- Multiple File Upload Field -->
       <div class="group">
-        <label for="file" class="block text-gray-400 text-lg font-medium mb-2"> 📎 Attach File (Optional) </label>
+        <label for="files" class="block text-gray-400 text-lg font-medium mb-2"> 📎 Attach Files (Optional) </label>
         <div
           class="file-upload-area bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:bg-gray-100 hover:border-orange-400 transition-all duration-300"
         >
-          <input type="file" id="file" name="file" class="hidden" accept="*/*" />
+          <input type="file" id="files" name="files" class="hidden" accept="*/*" multiple />
           <div id="fileUploadContent">
             <div class="text-5xl mb-4 text-gray-400">📁</div>
-            <p class="text-gray-700 text-lg font-semibold mb-2">Drop your file here or click to browse</p>
-            <p class="text-gray-500">Any file type accepted</p>
+            <p class="text-gray-700 text-lg font-semibold mb-2">Drop your files here or click to browse</p>
+            <p class="text-gray-500">Multiple files accepted - any file type</p>
           </div>
-          <div id="fileSelectedContent" class="hidden">
-            <div class="text-5xl mb-4 text-green-500">✅</div>
-            <p class="text-gray-700 text-lg font-semibold mb-2">File Selected:</p>
-            <p id="fileName" class="text-orange-600 text-lg font-medium"></p>
-          </div>
+        </div>
+        
+        <!-- Selected Files Preview -->
+        <div id="selectedFilesContainer" class="mt-4 hidden">
+          <h4 class="text-gray-600 font-medium mb-2">📋 Selected Files:</h4>
+          <div id="selectedFilesList" class="space-y-2"></div>
         </div>
       </div>
 
@@ -100,15 +109,21 @@ layout: default
   const FIREBASE_FUNCTION_URL = "https://asia-south1-isocnet-2d37f.cloudfunctions.net/submitForm"
 
   // File upload handling
-  const fileInput = document.getElementById("file")
+  const filesInput = document.getElementById("files")
   const fileUploadArea = document.querySelector(".file-upload-area")
   const fileUploadContent = document.getElementById("fileUploadContent")
-  const fileSelectedContent = document.getElementById("fileSelectedContent")
-  const fileName = document.getElementById("fileName")
+  const selectedFilesContainer = document.getElementById("selectedFilesContainer")
+  const selectedFilesList = document.getElementById("selectedFilesList")
+  const existingImagesContainer = document.getElementById("existingImagesContainer")
+  const existingImagesList = document.getElementById("existingImagesList")
+
+  let selectedFiles = []
+  let existingImages = []
+  let deletedFiles = []
 
   // Click to upload
   fileUploadArea.addEventListener("click", () => {
-    fileInput.click()
+    filesInput.click()
   })
 
   // Edit functionality - detect edit mode and populate form
@@ -125,7 +140,10 @@ layout: default
       document.getElementById("pageSubtitle").textContent = "Update your post and share your revised thoughts"
       document.getElementById("submitAction").textContent = "Update Post"
 
-      // Construct the full postSlug in format YYYY-MM-DD-slug
+      // Store the slug for form submission (just the slug part, not the full date-slug)
+      document.getElementById("slug").value = postSlug
+
+      // Construct the full postSlug in format YYYY-MM-DD-slug for loading
       const fullPostSlug = `${postDate}-${postSlug}`
 
       // Load existing post data
@@ -150,17 +168,14 @@ layout: default
       document.getElementById("errorMessage").classList.remove("hidden")
     }
   }
-  function parseAndPopulateForm(postContent, postSlug) {
-    // Store the slug for form submission
-    document.getElementById("postSlug").value = postSlug
 
+  function parseAndPopulateForm(postContent, postSlug) {
     // Parse the markdown front matter and content
     const frontMatterMatch = postContent.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/)
     if (frontMatterMatch) {
       const frontMatter = frontMatterMatch[1]
       let content = frontMatterMatch[2]
 
-      // Extract title from front matter
       // Extract title from front matter - handle both quoted and unquoted titles
       const titleMatch = frontMatter.match(/title:\s*["']?([^"'\n]+?)["']?\s*$/m)
       if (titleMatch) {
@@ -170,18 +185,19 @@ layout: default
       // Extract and handle existing images
       const imageMatches = content.match(/!\[([^\]]*)\]\(([^)]+)\)/g)
       if (imageMatches && imageMatches.length > 0) {
-        // Extract the first image for preview
-        const firstImageMatch = imageMatches[0].match(/!\[([^\]]*)\]\(([^)]+)\)/)
-        if (firstImageMatch) {
-          const imageUrl = firstImageMatch[2]
-          const imageName = firstImageMatch[1]
-
-          // Show existing image preview
-          showExistingImagePreview(imageUrl, imageName)
-
-          // Remove image markdown from content for clean editing
-          content = content.replace(/!\[([^\]]*)\]\(([^)]+)\)\s*/g, "").trim()
-        }
+        existingImages = imageMatches.map(match => {
+          const imageMatch = match.match(/!\[([^\]]*)\]\(([^)]+)\)/)
+          return {
+            alt: imageMatch[1],
+            url: imageMatch[2],
+            filename: imageMatch[2].split('/').pop()
+          }
+        })
+        
+        displayExistingImages()
+        
+        // Remove image references from content for clean editing
+        content = content.replace(/!\[([^\]]*)\]\(([^)]+)\)\s*/g, "").trim()
       }
 
       // Set description as the content (without image references)
@@ -189,30 +205,87 @@ layout: default
     }
   }
 
-  function showExistingImagePreview(imageUrl, imageName) {
-    const fileUploadContent = document.getElementById("fileUploadContent")
-    fileUploadContent.innerHTML = `
-            <div class="existing-image-preview">
-                <div class="text-2xl mb-2 text-green-600">🖼️</div>
-                <p class="text-gray-700 text-lg font-semibold mb-2">Current Image: ${imageName}</p>
-                <img src="${imageUrl}" alt="${imageName}" class="max-w-full max-h-48 mx-auto rounded-lg shadow-md mb-4">
-                <p class="text-gray-500 text-sm">Upload a new file to replace this image</p>
-            </div>
+  function displayExistingImages() {
+    if (existingImages.length > 0) {
+      existingImagesContainer.classList.remove("hidden")
+      existingImagesList.innerHTML = ""
+      
+      existingImages.forEach((image, index) => {
+        const imageElement = document.createElement("div")
+        imageElement.className = "relative inline-block bg-gray-100 rounded-lg p-2 border"
+        imageElement.innerHTML = `
+          <img src="${image.url}" alt="${image.alt}" class="w-20 h-20 object-cover rounded">
+          <button type="button" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition-colors" onclick="removeExistingImage(${index})">
+            ×
+          </button>
+          <p class="text-xs text-gray-600 mt-1 truncate w-20">${image.filename}</p>
         `
+        existingImagesList.appendChild(imageElement)
+      })
+    }
+  }
+
+  function removeExistingImage(index) {
+    const removedImage = existingImages[index]
+    deletedFiles.push(removedImage.filename)
+    existingImages.splice(index, 1)
+    
+    // Update the hidden field
+    document.getElementById("deletedFiles").value = deletedFiles.join(",")
+    
+    // Refresh display
+    if (existingImages.length === 0) {
+      existingImagesContainer.classList.add("hidden")
+    } else {
+      displayExistingImages()
+    }
   }
 
   // Initialize edit mode on page load
   document.addEventListener("DOMContentLoaded", initializeEditMode)
 
   // File selection
-  fileInput.addEventListener("change", (e) => {
-    if (e.target.files.length > 0) {
-      const file = e.target.files[0]
-      fileName.textContent = file.name
-      fileUploadContent.classList.add("hidden")
-      fileSelectedContent.classList.remove("hidden")
-    }
+  filesInput.addEventListener("change", (e) => {
+    selectedFiles = Array.from(e.target.files)
+    displaySelectedFiles()
   })
+
+  function displaySelectedFiles() {
+    if (selectedFiles.length > 0) {
+      selectedFilesContainer.classList.remove("hidden")
+      selectedFilesList.innerHTML = ""
+      
+      selectedFiles.forEach((file, index) => {
+        const fileElement = document.createElement("div")
+        fileElement.className = "flex items-center justify-between bg-gray-50 p-3 rounded-lg border"
+        fileElement.innerHTML = `
+          <div class="flex items-center">
+            <span class="text-2xl mr-3">📄</span>
+            <div>
+              <p class="font-medium text-gray-800">${file.name}</p>
+              <p class="text-sm text-gray-500">${(file.size / 1024).toFixed(1)} KB</p>
+            </div>
+          </div>
+          <button type="button" class="text-red-500 hover:text-red-700 font-bold text-xl" onclick="removeSelectedFile(${index})">
+            ×
+          </button>
+        `
+        selectedFilesList.appendChild(fileElement)
+      })
+    } else {
+      selectedFilesContainer.classList.add("hidden")
+    }
+  }
+
+  function removeSelectedFile(index) {
+    selectedFiles.splice(index, 1)
+    displaySelectedFiles()
+    
+    // Update the file input
+    const dt = new DataTransfer()
+    selectedFiles.forEach(file => dt.items.add(file))
+    filesInput.files = dt.files
+  }
 
   // Drag and drop functionality
   fileUploadArea.addEventListener("dragover", (e) => {
@@ -229,14 +302,14 @@ layout: default
     e.preventDefault()
     fileUploadArea.classList.remove("border-orange-500", "bg-orange-50")
 
-    const files = e.dataTransfer.files
-    if (files.length > 0) {
-      fileInput.files = files
-      const file = files[0]
-      fileName.textContent = file.name
-      fileUploadContent.classList.add("hidden")
-      fileSelectedContent.classList.remove("hidden")
-    }
+    const files = Array.from(e.dataTransfer.files)
+    selectedFiles = [...selectedFiles, ...files]
+    displaySelectedFiles()
+    
+    // Update the file input
+    const dt = new DataTransfer()
+    selectedFiles.forEach(file => dt.items.add(file))
+    filesInput.files = dt.files
   })
 
   // Form submission
@@ -265,13 +338,22 @@ layout: default
       const formData = new FormData()
       formData.append("title", document.getElementById("title").value)
       formData.append("description", document.getElementById("description").value)
-      if (document.getElementById("file").files[0]) {
-        formData.append("file", document.getElementById("file").files[0])
-      }
+      
+      // Add multiple files
+      selectedFiles.forEach((file, index) => {
+        formData.append(`files`, file)
+      })
+      
       // Add slug for edit operations
-      const postSlug = document.getElementById("postSlug").value
-      if (postSlug) {
-        formData.append("slug", postSlug)
+      const slug = document.getElementById("slug").value
+      if (slug) {
+        formData.append("slug", slug)
+      }
+      
+      // Add deleted files list
+      const deletedFilesValue = document.getElementById("deletedFiles").value
+      if (deletedFilesValue) {
+        formData.append("deletedFiles", deletedFilesValue)
       }
 
       // Submit to Firebase function
@@ -293,8 +375,12 @@ layout: default
         // Reset form after delay
         setTimeout(() => {
           document.getElementById("submissionForm").reset()
-          fileUploadContent.classList.remove("hidden")
-          fileSelectedContent.classList.add("hidden")
+          selectedFiles = []
+          existingImages = []
+          deletedFiles = []
+          displaySelectedFiles()
+          selectedFilesContainer.classList.add("hidden")
+          existingImagesContainer.classList.add("hidden")
           successMessage.classList.add("hidden")
         }, 3000)
       } else {
