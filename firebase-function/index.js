@@ -606,7 +606,7 @@ exports.deletePost = functions.region("asia-south1").https.onRequest(async (req,
         }
       })
 
-      console.log(`Files to delete: ${filesToDelete.map(f => f.path).join(", ")}`)
+      console.log(`Files to delete: ${filesToDelete.map((f) => f.path).join(", ")}`)
 
       // Create new tree with files marked for deletion
       const { data: newTree } = await octokit.rest.git.createTree({
@@ -636,24 +636,6 @@ exports.deletePost = functions.region("asia-south1").https.onRequest(async (req,
       const githubUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/commit/${newCommit.sha}`
 
       // Send success response
-      res.status(200).json({
-        success: true,
-        message: "Post deleted successfully!",
-        data: {
-          postSlug: postSlug,
-          githubUrl: githubUrl,
-          deletedAt: new Date().toISOString(),
-        },
-      })
-    } catch (error) {
-      console.error("Error in deletePost:", error)
-      res.status(500).json({
-        success: false,
-        error: error.message || "An unexpected error occurred while deleting the post.",
-      })
-    }
-  })
-})
       res.status(200).json({
         success: true,
         message: "Post deleted successfully!",
