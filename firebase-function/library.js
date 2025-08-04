@@ -306,13 +306,6 @@ ${description}
     // Prepare files for single commit
     const filesToProcess = []
 
-    // Always add the blog.md file
-    filesToProcess.push({
-      path: blogFilePath,
-      content: postContent,
-      encoding: "utf-8",
-    })
-
     // Handle image logic - preserve existing images during edit if no new image provided
     let hasNewImage = fileName && fileContent && fileType && fileType.startsWith("image/")
 
@@ -341,6 +334,11 @@ ${imageMatch[0]}
 `
       }
     }
+    filesToProcess.push({
+      path: blogFilePath,
+      content: postContent,
+      encoding: "utf-8",
+    })
 
     // Use the generic single commit function
     const result = await createSingleCommit(filesToProcess, commitMessage)

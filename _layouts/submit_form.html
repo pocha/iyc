@@ -14,7 +14,7 @@ layout: default
     <form id="submissionForm" enctype="multipart/form-data" class="space-y-6">
       <!-- Title Field -->
       <!-- Hidden field for edit mode -->
-      <input type="hidden" id="postSlug" name="postSlug" value="">
+      <input type="hidden" id="postSlug" name="postSlug" value="" />
       <div class="group">
         <label for="title" class="block text-gray-400 text-lg font-medium mb-2"> 🎯 Post Title </label>
         <input
@@ -153,7 +153,7 @@ layout: default
   function parseAndPopulateForm(postContent, postSlug) {
     // Store the slug for form submission
     document.getElementById("postSlug").value = postSlug
-    
+
     // Parse the markdown front matter and content
     const frontMatterMatch = postContent.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/)
     if (frontMatterMatch) {
@@ -187,6 +187,18 @@ layout: default
       // Set description as the content (without image references)
       document.getElementById("description").value = content.trim()
     }
+  }
+
+  function showExistingImagePreview(imageUrl, imageName) {
+    const fileUploadContent = document.getElementById("fileUploadContent")
+    fileUploadContent.innerHTML = `
+            <div class="existing-image-preview">
+                <div class="text-2xl mb-2 text-green-600">🖼️</div>
+                <p class="text-gray-700 text-lg font-semibold mb-2">Current Image: ${imageName}</p>
+                <img src="${imageUrl}" alt="${imageName}" class="max-w-full max-h-48 mx-auto rounded-lg shadow-md mb-4">
+                <p class="text-gray-500 text-sm">Upload a new file to replace this image</p>
+            </div>
+        `
   }
 
   // Initialize edit mode on page load
