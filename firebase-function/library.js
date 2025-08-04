@@ -354,3 +354,15 @@ ${description}
 }
 
 // Submit form function (for creating blog posts) - refactored to use single commit
+
+// Export all functions and constants
+module.exports = {
+  corsHandler,
+  parseMultipartData,
+  octokit,
+  GITHUB_OWNER,
+  GITHUB_REPO,
+  GITHUB_BRANCH,
+  createSingleCommit,
+  handleJekyllPost
+}
