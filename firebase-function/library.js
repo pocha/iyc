@@ -131,7 +131,7 @@ const getOrCreateUserCookie = (existingCookie) => {
 }
 
 // Generic function to create a single commit with multiple files
-async function createSingleCommit(filesToProcess, commitMessage) {
+async function createSingleCommit(files, commitMessage) {
   try {
     // Get the latest commit SHA from the target branch
     const { data: refData } = await octokit.rest.git.getRef({
@@ -153,10 +153,10 @@ async function createSingleCommit(filesToProcess, commitMessage) {
 
     // Create tree with all file operations (create/update/delete)
     const tree = []
-    
+
     // Handle file operations
-    if (filesToProcess.files && filesToProcess.files.length > 0) {
-      for (const file of filesToProcess.files) {
+    if (files && files.length > 0) {
+      for (const file of files) {
         if (file.encoding === "base64") {
           // For binary files, create blob first
           const { data: blobData } = await octokit.rest.git.createBlob({
@@ -165,12 +165,20 @@ async function createSingleCommit(filesToProcess, commitMessage) {
             content: file.content,
             encoding: "base64",
           })
-          
+
           tree.push({
             path: file.path,
             mode: "100644",
             type: "blob",
             sha: blobData.sha,
+          })
+        } else if (file.encoding === null) {
+          // delete files
+          tree.push({
+            path: file.path,
+            mode: "100644",
+            type: "blob",
+            sha: null,
           })
         } else {
           // For text files, use content directly
@@ -181,18 +189,6 @@ async function createSingleCommit(filesToProcess, commitMessage) {
             content: file.content,
           })
         }
-      }
-    }
-    
-    // Handle file deletions
-    if (filesToProcess.deleteFiles && filesToProcess.deleteFiles.length > 0) {
-      for (const filePath of filesToProcess.deleteFiles) {
-        tree.push({
-          path: filePath,
-          mode: "100644",
-          type: "blob",
-          sha: null, // null sha means delete the file
-        })
       }
     }
 
@@ -371,7 +367,6 @@ ${description}
 
     // Prepare files for single commit
     const filesToProcess = []
-    const filesToDelete = []
 
     // Get existing images from the post directory
     let existingImages = []
@@ -382,30 +377,31 @@ ${description}
         path: postDirPath,
         ref: GITHUB_BRANCH,
       })
-      
+
       if (Array.isArray(dirResponse.data)) {
-        existingImages = dirResponse.data.filter(file => 
-          file.type === 'file' && 
-          file.name !== 'index.md' &&
-          /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name)
+        existingImages = dirResponse.data.filter(
+          (file) => file.type === "file" && file.name !== "index.md" && /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name)
         )
       }
     } catch (error) {
       console.log("No existing images found or directory doesn't exist")
     }
 
-    // Handle deleted files
     if (deletedFiles && deletedFiles.length > 0) {
-      deletedFiles.forEach(deletedFileName => {
-        const fileToDelete = existingImages.find(img => img.name === deletedFileName)
+      deletedFiles.forEach((deletedFileName) => {
+        const fileToDelete = existingImages.find((img) => img.name === deletedFileName)
         if (fileToDelete) {
-          filesToDelete.push(fileToDelete.path)
+          filesToProcess.push({
+            path: fileToDelete.path,
+            content: null,
+            encoding: null,
+          })
         }
       })
     }
 
     // Add remaining existing images to post content (those not deleted)
-    existingImages.forEach(image => {
+    existingImages.forEach((image) => {
       if (!deletedFiles || !deletedFiles.includes(image.name)) {
         postContent += `
 ![${image.name}](https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${image.path}?raw=true)
@@ -441,31 +437,6 @@ ${description}
       content: postContent,
       encoding: "utf-8",
     })
-
-    // Delete files if any
-    if (filesToDelete.length > 0) {
-      for (const filePath of filesToDelete) {
-        try {
-          const fileResponse = await octokit.rest.repos.getContent({
-            owner: GITHUB_OWNER,
-            repo: GITHUB_REPO,
-            path: filePath,
-            ref: GITHUB_BRANCH,
-          })
-
-          await octokit.rest.repos.deleteFile({
-            owner: GITHUB_OWNER,
-            repo: GITHUB_REPO,
-            path: filePath,
-            message: `Delete image: ${filePath.split('/').pop()}`,
-            sha: fileResponse.data.sha,
-            branch: GITHUB_BRANCH,
-          })
-        } catch (error) {
-          console.error(`Error deleting file ${filePath}:`, error)
-        }
-      }
-    }
 
     // Create single commit with all updated/new files
     const result = await createSingleCommit(filesToProcess, `Update blog post: ${title}`)
