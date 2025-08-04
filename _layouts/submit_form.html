@@ -17,6 +17,8 @@ layout: default
       <input type="hidden" id="deletedFiles" name="deletedFiles" value="" />
       
       <!-- Title Field -->
+      <!-- Hidden field for edit mode -->
+      <input type="hidden" id="postSlug" name="postSlug" value="" />
       <div class="group">
         <label for="title" class="block text-gray-400 text-lg font-medium mb-2"> 🎯 Post Title </label>
         <input
@@ -167,8 +169,10 @@ layout: default
       document.getElementById("errorMessage").classList.remove("hidden")
     }
   }
-
   function parseAndPopulateForm(postContent, postSlug) {
+    // Store the slug for form submission
+    document.getElementById("postSlug").value = postSlug
+
     // Parse the markdown front matter and content
     const frontMatterMatch = postContent.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/)
     if (frontMatterMatch) {
@@ -353,6 +357,11 @@ layout: default
       const deletedFilesValue = document.getElementById("deletedFiles").value
       if (deletedFilesValue) {
         formData.append("deletedFiles", deletedFilesValue)
+      }
+      // Add slug for edit operations
+      const postSlug = document.getElementById("postSlug").value
+      if (postSlug) {
+        formData.append("slug", postSlug)
       }
 
       // Submit to Firebase function
