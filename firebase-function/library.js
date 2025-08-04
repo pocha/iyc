@@ -229,7 +229,7 @@ async function createSingleCommit(files, commitMessage) {
 async function handleJekyllPost(slug, title, description, fileName, fileContent, fileType, userCookie) {
   try {
     const isEdit = slug && slug.trim() !== ""
-    let postSlug, postDate, postDirPath, blogFilePath, commitMessage
+    let postSlug, postDate, postDirPath, blogFilePath, commitMessage, existingContent
 
     if (isEdit) {
       // EDIT OPERATION: Fetch existing post content to verify ownership
