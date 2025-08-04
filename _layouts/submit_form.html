@@ -13,6 +13,8 @@ layout: default
   <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
     <form id="submissionForm" enctype="multipart/form-data" class="space-y-6">
       <!-- Title Field -->
+      <!-- Hidden field for edit mode -->
+      <input type="hidden" id="postSlug" name="postSlug" value="" />
       <div class="group">
         <label for="title" class="block text-gray-400 text-lg font-medium mb-2"> 🎯 Post Title </label>
         <input
@@ -148,8 +150,10 @@ layout: default
       document.getElementById("errorMessage").classList.remove("hidden")
     }
   }
-
   function parseAndPopulateForm(postContent, postSlug) {
+    // Store the slug for form submission
+    document.getElementById("postSlug").value = postSlug
+
     // Parse the markdown front matter and content
     const frontMatterMatch = postContent.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/)
     if (frontMatterMatch) {
@@ -263,6 +267,11 @@ layout: default
       formData.append("description", document.getElementById("description").value)
       if (document.getElementById("file").files[0]) {
         formData.append("file", document.getElementById("file").files[0])
+      }
+      // Add slug for edit operations
+      const postSlug = document.getElementById("postSlug").value
+      if (postSlug) {
+        formData.append("slug", postSlug)
       }
 
       // Submit to Firebase function
