@@ -313,8 +313,11 @@ ${description}
       encoding: "utf-8",
     })
 
-    // Handle image if provided
-    if (fileName && fileContent && fileType && fileType.startsWith("image/")) {
+    // Handle image logic - preserve existing images during edit if no new image provided
+    let hasNewImage = fileName && fileContent && fileType && fileType.startsWith("image/")
+    
+    if (hasNewImage) {
+      // New image provided
       const imageFileName = isEdit ? `${postSlug}-${fileName}` : `${postDate.split("T")[0]}-${postSlug}-${fileName}`
       const imagePath = `${postDirPath}/${imageFileName}`
 
@@ -323,15 +326,20 @@ ${description}
 ![${fileName}](https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${imagePath}?raw=true)
 `
 
-      // Update the blog.md content with image reference
-      filesToProcess[0].content = postContent
-
       // Add image file
       filesToProcess.push({
         path: imagePath,
         content: Buffer.from(fileContent).toString("base64"),
         encoding: "base64",
       })
+    } else if (isEdit && existingContent) {
+      // No new image but this is an edit - preserve existing image reference
+      const imageMatch = existingContent.match(/!\[.*?\]\(.*?\)/g)
+      if (imageMatch && imageMatch.length > 0) {
+        postContent += `
+${imageMatch[0]}
+`
+      }
     }
 
     // Use the generic single commit function
