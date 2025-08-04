@@ -104,7 +104,19 @@ const parseMultipartData = (req, options = {}) => {
     })
 
     // Pipe the request to busboy
-    req.pipe(busboyInstance)
+    // Handle Firebase Functions request body
+    if (req.rawBody) {
+      busboyInstance.end(req.rawBody)
+    } else {
+      // For Firebase Functions, we need to read the request body
+      let body = Buffer.alloc(0)
+      req.on("data", (chunk) => {
+        body = Buffer.concat([body, chunk])
+      })
+      req.on("end", () => {
+        busboyInstance.end(body)
+      })
+    }
   })
 }
 
