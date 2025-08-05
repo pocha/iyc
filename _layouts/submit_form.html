@@ -284,11 +284,6 @@ layout: default
   function removeSelectedFile(index) {
     attachedFiles.splice(index, 1)
     displayUploadedFiles()
-
-    // Update the file input
-    const dt = new DataTransfer()
-    attachedFiles.forEach((file) => dt.items.add(file))
-    filesInput.files = dt.files
   }
 
   // Drag and drop functionality
@@ -309,11 +304,6 @@ layout: default
     const files = Array.from(e.dataTransfer.files)
     attachedFiles = [...attachedFiles, ...files]
     displayUploadedFiles()
-
-    // Update the file input
-    const dt = new DataTransfer()
-    attachedFiles.forEach((file) => dt.items.add(file))
-    filesInput.files = dt.files
   })
 
   // Form submission
@@ -336,7 +326,6 @@ layout: default
     try {
       // Get or set user cookie
       const userCookie = getOrSetUserCookie()
-      console.log("Debug: userCookie value:", userCookie)
 
       // Prepare form data
       const formData = new FormData()
