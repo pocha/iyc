@@ -15,7 +15,7 @@ layout: default
       <!-- Hidden fields for edit mode -->
       <input type="hidden" id="slug" name="slug" value="" />
       <input type="hidden" id="deletedFiles" name="deletedFiles" value="" />
-      
+
       <!-- Title Field -->
       <!-- Hidden field for edit mode -->
       <div class="group">
@@ -39,7 +39,7 @@ layout: default
           rows="6"
           class="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:bg-white transition-all duration-300 text-lg resize-none"
         ></textarea>
-        
+
         <!-- Existing Images Container (for edit mode) -->
         <div id="existingImagesContainer" class="mt-4 hidden">
           <h4 class="text-gray-600 font-medium mb-2">📷 Current Images:</h4>
@@ -60,11 +60,11 @@ layout: default
             <p class="text-gray-500">Multiple files accepted - any file type</p>
           </div>
         </div>
-        
+
         <!-- Selected Files Preview -->
         <div id="selectedFilesContainer" class="mt-4 hidden">
-          <h4 class="text-gray-600 font-medium mb-2">📋 Selected Files:</h4>
-          <div id="selectedFilesList" class="space-y-2"></div>
+          <h4 class="text-gray-600 font-medium mb-2">📋 Uploaded Files:</h4>
+          <div id="uploadedFilesList" class="space-y-2"></div>
         </div>
       </div>
 
@@ -114,11 +114,11 @@ layout: default
   const fileUploadArea = document.querySelector(".file-upload-area")
   const fileUploadContent = document.getElementById("fileUploadContent")
   const selectedFilesContainer = document.getElementById("selectedFilesContainer")
-  const selectedFilesList = document.getElementById("selectedFilesList")
+  const uploadedFilesList = document.getElementById("uploadedFilesList")
   const existingImagesContainer = document.getElementById("existingImagesContainer")
   const existingImagesList = document.getElementById("existingImagesList")
 
-  let selectedFiles = []
+  let uploadedFiles = []
   let existingImages = []
   let deletedFiles = []
 
@@ -140,6 +140,7 @@ layout: default
       document.getElementById("pageTitle").textContent = "✏️ Edit Your Post"
       document.getElementById("pageSubtitle").textContent = "Update your post and share your revised thoughts"
       document.getElementById("submitAction").textContent = "Update Post"
+      document.getElementById("loadingText").textContent = "⏳ Updating..."
 
       // Store the slug for form submission (just the slug part, not the full date-slug)
       document.getElementById("slug").value = slug
@@ -169,9 +170,6 @@ layout: default
     }
   }
   function parseAndPopulateForm(postContent, fullPostSlug) {
-    // Store the slug for form submission
-    document.getElementById("slug").value = fullPostSlug
-
     // Parse the markdown front matter and content
     const frontMatterMatch = postContent.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/)
     if (frontMatterMatch) {
@@ -187,17 +185,17 @@ layout: default
       // Extract and handle existing images
       const imageMatches = content.match(/!\[([^\]]*)\]\(([^)]+)\)/g)
       if (imageMatches && imageMatches.length > 0) {
-        existingImages = imageMatches.map(match => {
+        existingImages = imageMatches.map((match) => {
           const imageMatch = match.match(/!\[([^\]]*)\]\(([^)]+)\)/)
           return {
             alt: imageMatch[1],
             url: imageMatch[2],
-            filename: imageMatch[2].split('/').pop()
+            filename: imageMatch[2].split("/").pop(),
           }
         })
-        
+
         displayExistingImages()
-        
+
         // Remove image references from content for clean editing
         content = content.replace(/!\[([^\]]*)\]\(([^)]+)\)\s*/g, "").trim()
       }
@@ -211,7 +209,7 @@ layout: default
     if (existingImages.length > 0) {
       existingImagesContainer.classList.remove("hidden")
       existingImagesList.innerHTML = ""
-      
+
       existingImages.forEach((image, index) => {
         const imageElement = document.createElement("div")
         imageElement.className = "relative inline-block bg-gray-100 rounded-lg p-2 border"
@@ -231,10 +229,10 @@ layout: default
     const removedImage = existingImages[index]
     deletedFiles.push(removedImage.filename)
     existingImages.splice(index, 1)
-    
+
     // Update the hidden field
     document.getElementById("deletedFiles").value = deletedFiles.join(",")
-    
+
     // Refresh display
     if (existingImages.length === 0) {
       existingImagesContainer.classList.add("hidden")
@@ -248,16 +246,16 @@ layout: default
 
   // File selection
   filesInput.addEventListener("change", (e) => {
-    selectedFiles = Array.from(e.target.files)
-    displaySelectedFiles()
+    uploadedFiles = Array.from(e.target.files)
+    displayUploadedFiles()
   })
 
-  function displaySelectedFiles() {
-    if (selectedFiles.length > 0) {
+  function displayUploadedFiles() {
+    if (uploadedFiles.length > 0) {
       selectedFilesContainer.classList.remove("hidden")
-      selectedFilesList.innerHTML = ""
-      
-      selectedFiles.forEach((file, index) => {
+      uploadedFilesList.innerHTML = ""
+
+      uploadedFiles.forEach((file, index) => {
         const fileElement = document.createElement("div")
         fileElement.className = "flex items-center justify-between bg-gray-50 p-3 rounded-lg border"
         fileElement.innerHTML = `
@@ -272,7 +270,7 @@ layout: default
             ×
           </button>
         `
-        selectedFilesList.appendChild(fileElement)
+        uploadedFilesList.appendChild(fileElement)
       })
     } else {
       selectedFilesContainer.classList.add("hidden")
@@ -280,12 +278,12 @@ layout: default
   }
 
   function removeSelectedFile(index) {
-    selectedFiles.splice(index, 1)
-    displaySelectedFiles()
-    
+    uploadedFiles.splice(index, 1)
+    displayUploadedFiles()
+
     // Update the file input
     const dt = new DataTransfer()
-    selectedFiles.forEach(file => dt.items.add(file))
+    uploadedFiles.forEach((file) => dt.items.add(file))
     filesInput.files = dt.files
   }
 
@@ -305,12 +303,12 @@ layout: default
     fileUploadArea.classList.remove("border-orange-500", "bg-orange-50")
 
     const files = Array.from(e.dataTransfer.files)
-    selectedFiles = [...selectedFiles, ...files]
-    displaySelectedFiles()
-    
+    uploadedFiles = [...uploadedFiles, ...files]
+    displayUploadedFiles()
+
     // Update the file input
     const dt = new DataTransfer()
-    selectedFiles.forEach(file => dt.items.add(file))
+    uploadedFiles.forEach((file) => dt.items.add(file))
     filesInput.files = dt.files
   })
 
@@ -340,18 +338,18 @@ layout: default
       const formData = new FormData()
       formData.append("title", document.getElementById("title").value)
       formData.append("description", document.getElementById("description").value)
-      
+
       // Add multiple files
-      selectedFiles.forEach((file, index) => {
+      uploadedFiles.forEach((file, index) => {
         formData.append(`files`, file)
       })
-      
+
       // Add slug for edit operations
       const slug = document.getElementById("slug").value
       if (slug) {
         formData.append("slug", slug)
       }
-      
+
       // Add deleted files list
       const deletedFilesValue = document.getElementById("deletedFiles").value
       if (deletedFilesValue) {
@@ -374,18 +372,6 @@ layout: default
 
         // Show success message
         successMessage.classList.remove("hidden")
-
-        // Reset form after delay
-        setTimeout(() => {
-          document.getElementById("submissionForm").reset()
-          selectedFiles = []
-          existingImages = []
-          deletedFiles = []
-          displaySelectedFiles()
-          selectedFilesContainer.classList.add("hidden")
-          existingImagesContainer.classList.add("hidden")
-          successMessage.classList.add("hidden")
-        }, 3000)
       } else {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
