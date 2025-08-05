@@ -7,7 +7,9 @@ const {
   GITHUB_OWNER,
   GITHUB_REPO,
   GITHUB_BRANCH,
-  handleJekyllPost,
+  createNewPost,
+  editPost,
+  getOrCreateUserCookie,
 } = require("./library")
 
 exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) => {
@@ -38,32 +40,48 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       }
 
       // Parse multipart data with blog post specific options
-      const { fields, fileData, fileName, fileType } = await parseMultipartData(req, {
+      const { fields, files } = await parseMultipartData(req, {
         fileSize: 10 * 1024 * 1024, // 10MB limit for blog posts
-        allowedFileField: "image",
+        files: 10, // Allow multiple files
         imageOnly: true,
       })
 
       // Extract form data
-      const { title, description, slug } = fields
+      const { title, description, slug, date, deletedFiles } = fields
 
-      // Extract user cookie from request headers
-      const userCookie =
-        req.headers["x-user-cookie"] || req.headers["cookie"]?.match(/forum_user_id=([^;]+)/)?.[1] || null
+      // Extract user cookie from request headers or fields
+      let userCookie =
+        req.headers["x-user-cookie"] ||
+        req.headers["cookie"]?.match(/forum_user_id=([^;]+)/)?.[1] ||
+        fields.userCookie ||
+        null
 
-      // Validate that cookie is present (mandatory for post creation/editing)
-      if (!userCookie) {
-        res.status(401).json({
+      // Generate user cookie if not present
+      userCookie = getOrCreateUserCookie(userCookie)
+
+      // Validate required fields
+      if (!title || !description) {
+        res.status(400).json({
           success: false,
-          error: "User cookie is required to create or edit a post. Please ensure you have a valid session.",
+          error: "Title and description are required fields.",
         })
         return
       }
+
       // Determine if this is an edit operation
       const isEdit = slug && slug.trim() !== ""
 
-      // Use the combined function for both create and edit operations
-      const result = await handleJekyllPost(slug, title, description, fileName, fileData, fileType, userCookie)
+      let result
+      if (isEdit) {
+        // Parse deleted files if provided
+        const deletedFilesList = deletedFiles ? deletedFiles.split(",").filter((f) => f.trim()) : []
+
+        // Edit existing post
+        result = await editPost(slug, date, title, description, files, deletedFilesList, userCookie)
+      } else {
+        // Create new post
+        result = await createNewPost(title, description, files, userCookie)
+      }
 
       // Send success response
       res.status(200).json({
@@ -76,6 +94,7 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
           githubUrl: result.githubUrl,
           submittedAt: new Date().toISOString(),
           operation: isEdit ? "update" : "create",
+          userCookie: userCookie,
         },
       })
     } catch (error) {
@@ -87,5 +106,3 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
     }
   })
 })
-
-// Submit comment function (for adding comments to blog posts) - refactored to use single commit

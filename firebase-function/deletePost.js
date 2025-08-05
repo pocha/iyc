@@ -1,5 +1,5 @@
 const functions = require("firebase-functions")
-const { corsHandler, octokit, GITHUB_OWNER, GITHUB_REPO, GITHUB_BRANCH } = require("./library")
+const { corsHandler, octokit, GITHUB_OWNER, GITHUB_REPO, GITHUB_BRANCH, createSingleCommit } = require("./library")
 
 exports.deletePost = functions.region("asia-south1").https.onRequest(async (req, res) => {
   return corsHandler(req, res, async () => {
@@ -25,25 +25,25 @@ exports.deletePost = functions.region("asia-south1").https.onRequest(async (req,
 
       console.log(`Attempting to delete post: ${postSlug}`)
 
-      // Get current repository state
-      const { data: refData } = await octokit.rest.git.getRef({
+      // Get current branch reference to get the latest SHA
+      const branchRef = await octokit.rest.git.getRef({
         owner: GITHUB_OWNER,
         repo: GITHUB_REPO,
         ref: `heads/${GITHUB_BRANCH}`,
       })
+      const currentSha = branchRef.data.object.sha
 
-      const currentSha = refData.object.sha
-
-      // Get current tree
-      const { data: treeData } = await octokit.rest.git.getTree({
+      // Get the current tree
+      const treeResponse = await octokit.rest.git.getTree({
         owner: GITHUB_OWNER,
         repo: GITHUB_REPO,
         tree_sha: currentSha,
         recursive: true,
       })
+      const treeData = treeResponse.data
 
       // Create array of files to delete by targeting specific paths
-      const filesToDelete = []
+      const filesToProcess = []
 
       // Add post directory files
       const postDirPath = `_posts/${postSlug}`
@@ -51,43 +51,27 @@ exports.deletePost = functions.region("asia-south1").https.onRequest(async (req,
 
       treeData.tree.forEach((item) => {
         if (item.path.startsWith(postDirPath + "/") || item.path.startsWith(commentDirPath + "/")) {
-          filesToDelete.push({
+          filesToProcess.push({
             path: item.path,
-            mode: "100644",
-            type: "blob",
-            sha: null, // This marks the file for deletion
+            content: null,
+            encoding: null, // This marks the file for deletion
           })
         }
       })
 
-      console.log(`Files to delete: ${filesToDelete.map((f) => f.path).join(", ")}`)
+      console.log(`Files to delete: ${filesToProcess.map((f) => f.path).join(", ")}`)
 
-      // Create new tree with files marked for deletion
-      const { data: newTree } = await octokit.rest.git.createTree({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        base_tree: currentSha,
-        tree: filesToDelete,
-      })
+      if (filesToProcess.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: "No files found for the specified post slug",
+        })
+      }
 
-      // Create new commit
-      const { data: newCommit } = await octokit.rest.git.createCommit({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        message: `Delete post: ${postSlug}`,
-        tree: newTree.sha,
-        parents: [currentSha],
-      })
+      // Use createSingleCommit to delete all files in one commit
+      const result = await createSingleCommit(filesToProcess, `Delete post: ${postSlug}`)
 
-      // Update reference
-      await octokit.rest.git.updateRef({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        ref: `heads/${GITHUB_BRANCH}`,
-        sha: newCommit.sha,
-      })
-
-      const githubUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/commit/${newCommit.sha}`
+      const githubUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/commit/${result.commitSha}`
 
       // Send success response
       res.status(200).json({

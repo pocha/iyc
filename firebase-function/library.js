@@ -25,6 +25,24 @@ const corsHandler = cors({
   methods: ["GET", "POST", "OPTIONS"],
 })
 
+// Centralized path management function
+function getPostPaths(slug, date, imageFileName = null) {
+  const postDirPath = `_posts/${date}-${slug}`
+  const blogFilePath = `${postDirPath}/index.md`
+
+  const paths = {
+    postDirPath,
+    blogFilePath,
+  }
+
+  // Add imagePath if imageFileName is provided
+  if (imageFileName) {
+    paths.imagePath = `${postDirPath}/${imageFileName}`
+  }
+
+  return paths
+}
+
 // Shared function to parse multipart form data using Busboy
 const parseMultipartData = (req, options = {}) => {
   return new Promise((resolve, reject) => {
@@ -55,75 +73,56 @@ const parseMultipartData = (req, options = {}) => {
     })
 
     const fields = {}
-    let fileData = null
-    let fileName = null
-    let fileType = null
-    let hasFinished = false
+    const files = []
 
     // Handle form fields
     busboyInstance.on("field", (fieldname, val) => {
-      console.log(`Field received: ${fieldname} = ${val}`)
       fields[fieldname] = val
     })
 
     // Handle file uploads
     busboyInstance.on("file", (fieldname, file, info) => {
-      console.log(`File received: ${fieldname}, filename: ${info.filename}, mimetype: ${info.mimeType}`)
+      const { filename, mimeType } = info
 
-      // Only process if filename exists and matches expected field name
-      if (info.filename && info.filename.trim() !== "") {
-        // Check if image-only restriction is enabled
-        if (config.imageOnly && !info.mimeType.startsWith("image/")) {
-          reject(new Error("Only image files are allowed for attachments."))
-          return
-        }
-
-        fileName = info.filename
-        fileType = info.mimeType
-        const chunks = []
-
-        file.on("data", (chunk) => {
-          chunks.push(chunk)
-        })
-
-        file.on("end", () => {
-          if (chunks.length > 0) {
-            fileData = Buffer.concat(chunks)
-            console.log(`File data received: ${fileData.length} bytes`)
-          }
-        })
-      } else {
-        // Skip empty file fields or files without names
-        console.log("Skipping empty file field")
-        file.resume()
+      // Validate file type if imageOnly is true
+      if (config.imageOnly && !mimeType.startsWith("image/")) {
+        file.resume() // Consume the stream
+        reject(new Error(`Invalid file type: ${mimeType}. Only images are allowed.`))
+        return
       }
-    })
 
-    // Handle completion
-    busboyInstance.on("finish", async () => {
-      if (hasFinished) return // Prevent double processing
-      hasFinished = true
+      const chunks = []
+      file.on("data", (chunk) => {
+        chunks.push(chunk)
+      })
 
-      console.log("Busboy finished parsing")
-      console.log("Fields received:", Object.keys(fields))
-      console.log("File info:", { fileName, fileType, hasFileData: !!fileData })
+      file.on("end", () => {
+        const fileBuffer = Buffer.concat(chunks)
+        files.push({
+          fieldname,
+          filename,
+          mimeType,
+          buffer: fileBuffer,
+        })
+      })
 
-      resolve({
-        fields,
-        fileData,
-        fileName,
-        fileType,
+      file.on("error", (err) => {
+        reject(new Error(`File processing error: ${err.message}`))
       })
     })
 
-    // Handle errors
-    busboyInstance.on("error", (error) => {
-      console.error("Busboy error:", error)
-      reject(error)
+    // Handle parsing completion
+    busboyInstance.on("finish", () => {
+      resolve({ fields, files })
+    })
+
+    // Handle parsing errors
+    busboyInstance.on("error", (err) => {
+      reject(new Error(`Parsing error: ${err.message}`))
     })
 
     // Pipe the request to busboy
-    // req.pipe(busboyInstance)
+    // Handle Firebase Functions request body
     if (req.rawBody) {
       busboyInstance.end(req.rawBody)
     } else {
@@ -139,74 +138,96 @@ const parseMultipartData = (req, options = {}) => {
   })
 }
 
-// Generic function to create single commit with multiple files
+// Helper function to generate user cookie
+const generateUserCookie = () => {
+  return uuidv4()
+}
+
+// Helper function to get or create user cookie
+const getOrCreateUserCookie = (existingCookie) => {
+  return existingCookie && existingCookie.trim() !== "" ? existingCookie : generateUserCookie()
+}
+
+// Generic function to create a single commit with multiple files
 async function createSingleCommit(files, commitMessage) {
   try {
-    // Get the latest commit SHA
-    const { data: refData } = await octokit.git.getRef({
+    // Get the latest commit SHA from the target branch
+    const { data: refData } = await octokit.rest.git.getRef({
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
       ref: `heads/${GITHUB_BRANCH}`,
     })
+
     const latestCommitSha = refData.object.sha
 
-    // Get the base tree
-    const { data: baseTree } = await octokit.git.getTree({
+    // Get the tree SHA of the latest commit
+    const { data: commitData } = await octokit.rest.git.getCommit({
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
-      tree_sha: latestCommitSha,
+      commit_sha: latestCommitSha,
     })
 
-    // Process files and create blobs for binary files
-    const treeItems = []
+    const baseTreeSha = commitData.tree.sha
 
-    for (const file of files) {
-      if (file.encoding === "base64") {
-        // For binary files (images), create a blob first
-        const { data: blob } = await octokit.git.createBlob({
-          owner: GITHUB_OWNER,
-          repo: GITHUB_REPO,
-          content: file.content,
-          encoding: "base64",
-        })
+    // Create tree with all file operations (create/update/delete)
+    const tree = []
 
-        treeItems.push({
-          path: file.path,
-          mode: "100644",
-          type: "blob",
-          sha: blob.sha,
-        })
-      } else {
-        // For text files, use content directly
-        treeItems.push({
-          path: file.path,
-          mode: "100644",
-          type: "blob",
-          content: file.content,
-          encoding: file.encoding || "utf-8",
-        })
+    // Handle file operations
+    if (files && files.length > 0) {
+      for (const file of files) {
+        if (file.encoding === "base64") {
+          // For binary files, create blob first
+          const { data: blobData } = await octokit.rest.git.createBlob({
+            owner: GITHUB_OWNER,
+            repo: GITHUB_REPO,
+            content: file.content,
+            encoding: "base64",
+          })
+
+          tree.push({
+            path: file.path,
+            mode: "100644",
+            type: "blob",
+            sha: blobData.sha,
+          })
+        } else if (file.encoding === null) {
+          // delete files
+          tree.push({
+            path: file.path,
+            mode: "100644",
+            type: "blob",
+            sha: null,
+          })
+        } else {
+          // For text files, use content directly
+          tree.push({
+            path: file.path,
+            mode: "100644",
+            type: "blob",
+            content: file.content,
+          })
+        }
       }
     }
 
-    // Create tree with all files
-    const { data: newTree } = await octokit.git.createTree({
+    const { data: treeData } = await octokit.rest.git.createTree({
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
-      base_tree: baseTree.sha,
-      tree: treeItems,
+      base_tree: baseTreeSha,
+      tree: tree,
     })
 
-    // Create single commit
-    const { data: newCommit } = await octokit.git.createCommit({
+    // Create commit
+    const { data: newCommit } = await octokit.rest.git.createCommit({
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
       message: commitMessage,
-      tree: newTree.sha,
+      tree: treeData.sha,
       parents: [latestCommitSha],
     })
 
-    // Update the reference
-    await octokit.git.updateRef({
+    // Update the branch reference
+    await octokit.rest.git.updateRef({
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
       ref: `heads/${GITHUB_BRANCH}`,
@@ -224,75 +245,27 @@ async function createSingleCommit(files, commitMessage) {
   }
 }
 
-// Function to create Jekyll post using single commit
-// Combined function to handle both create and update Jekyll post operations
-async function handleJekyllPost(slugWithDate, title, description, fileName, fileContent, fileType, userCookie) {
+// Function to create a new blog post with multiple images
+async function createNewPost(title, description, files, userCookie) {
   try {
-    const isEdit = slugWithDate && slugWithDate.trim() !== ""
-    let slug, postDate, postDirPath, blogFilePath, commitMessage, existingContent
+    const now = new Date()
+    const dateStr = now.toISOString().split("T")[0] // YYYY-MM-DD format
+    const postDate = now.toISOString()
 
-    if (isEdit) {
-      // EDIT OPERATION: Fetch existing post content to verify ownership
-      // Directly construct the path using the slug pattern
-      blogFilePath = `_posts/${slugWithDate}/index.md`
-      let existingSlug
+    // Create slug from title
+    const slug = title
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .trim("-")
 
-      // Get the existing post content to verify user ownership
-      let existingFile, existingContent
-      try {
-        const response = await octokit.rest.repos.getContent({
-          owner: GITHUB_OWNER,
-          repo: GITHUB_REPO,
-          path: blogFilePath,
-          ref: GITHUB_BRANCH,
-        })
-        existingFile = response.data
-        existingContent = Buffer.from(existingFile.content, "base64").toString("utf-8")
+    // Create directory name for the blog post
+    // Get centralized paths
+    const paths = getPostPaths(slug, dateStr)
+    const { postDirPath, blogFilePath } = paths
 
-        // Check if the user cookie matches the one in the existing post
-        const cookieMatch = existingContent.match(/user_cookie:\s*(.+)/)
-        const existingCookie = cookieMatch ? cookieMatch[1].trim() : null
-        const blogSlugFound = existingContent.match(/slug:\s*(.+)/)
-        existingSlug = blogSlugFound ? blogSlugFound[1].trim() : null
-
-        if (existingCookie !== userCookie) {
-          throw new Error("Unauthorized: You can only edit posts you created")
-        }
-      } catch (error) {
-        if (error.status === 404) {
-          throw new Error(`Post not found: ${slugWithDate}`)
-        }
-        throw new Error("Unauthorized: You can only edit posts you created")
-      }
-
-      // Extract existing date to preserve it
-      const dateMatch = existingContent.match(/date:\s*(.+)/)
-      postDate = dateMatch ? dateMatch[1].trim() : new Date().toISOString()
-      slug = existingSlug
-      postDirPath = `_posts/${slugWithDate}`
-      commitMessage = `Update blog post: ${title}`
-    } else {
-      // CREATE OPERATION: Create new post
-      const now = new Date()
-      const dateStr = now.toISOString().split("T")[0] // YYYY-MM-DD format
-      postDate = now.toISOString()
-
-      // Create slug from title
-      slug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .trim("-")
-
-      // Create directory name for the blog post
-      const postDirName = `${dateStr}-${slug}`
-      postDirPath = `_posts/${postDirName}`
-      blogFilePath = `${postDirPath}/index.md`
-      commitMessage = `Create new blog post: ${title}`
-    }
-
-    // COMMON LOGIC: Create Jekyll front matter and content
+    // Create Jekyll front matter and content
     let postContent = `---
 layout: post
 title: "${title}"
@@ -309,42 +282,36 @@ ${description}
     // Prepare files for single commit
     const filesToProcess = []
 
-    // Handle image logic - preserve existing images during edit if no new image provided
-    let hasNewImage = fileName && fileContent && fileType && fileType.startsWith("image/")
+    // Handle multiple images
+    if (files && files.length > 0) {
+      files.forEach((file, index) => {
+        if (file.mimeType && file.mimeType.startsWith("image/")) {
+          const { imagePath } = getPostPaths(slug, dateStr, file.filename)
 
-    if (hasNewImage) {
-      // New image provided
-      const imageFileName = isEdit ? `${slug}-${fileName}` : `${postDate.split("T")[0]}-${slug}-${fileName}`
-      const imagePath = `${postDirPath}/${imageFileName}`
-
-      // Add image reference to post content
-      postContent += `
-![${fileName}](https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${imagePath}?raw=true)
+          // Add image reference to post content
+          postContent += `
+![${file.filename}](https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${imagePath}?raw=true)
 `
 
-      // Add image file
-      filesToProcess.push({
-        path: imagePath,
-        content: Buffer.from(fileContent).toString("base64"),
-        encoding: "base64",
+          // Add image file to processing queue
+          filesToProcess.push({
+            path: imagePath,
+            content: file.buffer.toString("base64"),
+            encoding: "base64",
+          })
+        }
       })
-    } else if (isEdit && existingContent) {
-      // No new image but this is an edit - preserve existing image reference
-      const imageMatch = existingContent.match(/!\[.*?\]\(.*?\)/g)
-      if (imageMatch && imageMatch.length > 0) {
-        postContent += `
-${imageMatch[0]}
-`
-      }
     }
+
+    // Add the blog post markdown file
     filesToProcess.push({
       path: blogFilePath,
       content: postContent,
       encoding: "utf-8",
     })
 
-    // Use the generic single commit function
-    const result = await createSingleCommit(filesToProcess, commitMessage)
+    // Create single commit with all files
+    const result = await createSingleCommit(filesToProcess, `Create new blog post: ${title}`)
 
     // Extract date components for URL
     const dateObj = new Date(postDate)
@@ -357,12 +324,149 @@ ${imageMatch[0]}
       githubUrl: result.githubUrl,
     }
   } catch (error) {
-    console.error("Error handling Jekyll post:", error)
+    console.error("Error creating new post:", error)
     throw error
   }
 }
 
-// Submit form function (for creating blog posts) - refactored to use single commit
+// Function to edit an existing blog post with multiple images
+async function editPost(slug, date, title, description, files, deletedFiles, userCookie) {
+  try {
+    // Construct the path using the slug pattern
+    // Get centralized paths
+    const paths = getPostPaths(slug, date)
+    const { postDirPath, blogFilePath } = paths
+
+    // Get the existing post content to verify user ownership
+    let existingFile, existingContent
+    try {
+      const response = await octokit.rest.repos.getContent({
+        owner: GITHUB_OWNER,
+        repo: GITHUB_REPO,
+        path: blogFilePath,
+        ref: GITHUB_BRANCH,
+      })
+      existingFile = response.data
+      existingContent = Buffer.from(existingFile.content, "base64").toString("utf-8")
+
+      // Check if the user cookie matches the one in the existing post
+      const cookieMatch = existingContent.match(/user_cookie:\s*(.+)/)
+      const existingCookie = cookieMatch ? cookieMatch[1].trim() : null
+
+      if (existingCookie !== userCookie) {
+        throw new Error("Unauthorized: You can only edit posts you created")
+      }
+    } catch (error) {
+      if (error.status === 404) {
+        throw new Error(`Post not found: ${slug}`)
+      }
+      throw new Error("Unauthorized: You can only edit posts you created")
+    }
+
+    // Create updated Jekyll front matter and content
+    let postContent = `---
+layout: post
+title: "${title}"
+date: ${date}
+author: Anonymous
+slug: ${slug}
+user_cookie: ${userCookie}
+---
+
+${description}
+
+`
+
+    // Prepare files for single commit
+    const filesToProcess = []
+
+    // Get existing images from the post directory
+    let existingImages = []
+    try {
+      const dirResponse = await octokit.rest.repos.getContent({
+        owner: GITHUB_OWNER,
+        repo: GITHUB_REPO,
+        path: postDirPath,
+        ref: GITHUB_BRANCH,
+      })
+
+      if (Array.isArray(dirResponse.data)) {
+        existingImages = dirResponse.data.filter(
+          (file) => file.type === "file" && file.name !== "index.md" && /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name)
+        )
+      }
+    } catch (error) {
+      console.log("No existing images found or directory doesn't exist")
+    }
+
+    if (deletedFiles && deletedFiles.length > 0) {
+      deletedFiles.forEach((deletedFileName) => {
+        const fileToDelete = existingImages.find((img) => img.name === deletedFileName)
+        if (fileToDelete) {
+          filesToProcess.push({
+            path: fileToDelete.path,
+            content: null,
+            encoding: null,
+          })
+        }
+      })
+    }
+
+    // Add remaining existing images to post content (those not deleted)
+    existingImages.forEach((image) => {
+      if (!deletedFiles || !deletedFiles.includes(image.name)) {
+        postContent += `
+![${image.name}](https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${image.path}?raw=true)
+`
+      }
+    })
+
+    // Handle new images
+    if (files && files.length > 0) {
+      files.forEach((file, index) => {
+        if (file.mimeType && file.mimeType.startsWith("image/")) {
+          const { imagePath } = getPostPaths(slug, date, file.filename)
+
+          // Add image reference to post content
+          postContent += `
+![${file.filename}](https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${imagePath}?raw=true)
+`
+
+          // Add image file to processing queue
+          filesToProcess.push({
+            path: imagePath,
+            content: file.buffer.toString("base64"),
+            encoding: "base64",
+          })
+        }
+      })
+    }
+
+    // Add the updated blog post markdown file
+    filesToProcess.push({
+      path: blogFilePath,
+      content: postContent,
+      encoding: "utf-8",
+    })
+
+    // Create single commit with all updated/new files
+    const result = await createSingleCommit(filesToProcess, `Update blog post: ${title}`)
+
+    // Extract date components for URL
+    const dateObj = new Date(date)
+    return {
+      success: true,
+      postUrl: `http://20.42.15.153:4001/iyc/${dateObj.getFullYear()}/${String(dateObj.getMonth() + 1).padStart(
+        2,
+        "0"
+      )}/${String(dateObj.getDate()).padStart(2, "0")}/${slug}.html`,
+      githubUrl: result.githubUrl,
+    }
+  } catch (error) {
+    console.error("Error editing post:", error)
+    throw error
+  }
+}
 
 // Export all functions and constants
 module.exports = {
@@ -374,5 +478,8 @@ module.exports = {
   GITHUB_REPO,
   GITHUB_BRANCH,
   createSingleCommit,
-  handleJekyllPost,
+  generateUserCookie,
+  getOrCreateUserCookie,
+  createNewPost,
+  editPost,
 }
