@@ -25,6 +25,24 @@ const corsHandler = cors({
   methods: ["GET", "POST", "OPTIONS"],
 })
 
+// Centralized path management function
+function getPostPaths(slug, date, imageFileName = null) {
+  const postDirPath = `_posts/${date}-${slug}`
+  const blogFilePath = `${postDirPath}/index.md`
+
+  const paths = {
+    postDirPath,
+    blogFilePath,
+  }
+
+  // Add imagePath if imageFileName is provided
+  if (imageFileName) {
+    paths.imagePath = `${postDirPath}/${date}-${slug}-${imageFileName}`
+  }
+
+  return paths
+}
+
 // Shared function to parse multipart form data using Busboy
 const parseMultipartData = (req, options = {}) => {
   return new Promise((resolve, reject) => {
@@ -243,9 +261,9 @@ async function createNewPost(title, description, files, userCookie) {
       .trim("-")
 
     // Create directory name for the blog post
-    const postDirName = `${dateStr}-${slug}`
-    const postDirPath = `_posts/${postDirName}`
-    const blogFilePath = `${postDirPath}/index.md`
+    // Get centralized paths
+    const paths = getPostPaths(slug, dateStr)
+    const { postDirPath, blogFilePath } = paths
 
     // Create Jekyll front matter and content
     let postContent = `---
@@ -268,8 +286,7 @@ ${description}
     if (files && files.length > 0) {
       files.forEach((file, index) => {
         if (file.mimeType && file.mimeType.startsWith("image/")) {
-          const imageFileName = `${dateStr}-${slug}-${file.filename}`
-          const imagePath = `${postDirPath}/${imageFileName}`
+          const { imagePath } = getPostPaths(slug, dateStr, file.filename)
 
           // Add image reference to post content
           postContent += `
@@ -316,8 +333,9 @@ ${description}
 async function editPost(slug, date, title, description, files, deletedFiles, userCookie) {
   try {
     // Construct the path using the slug pattern
-    const blogFilePath = `_posts/${date}-${slug}/index.md`
-    const postDirPath = `_posts/${date}-${slug}`
+    // Get centralized paths
+    const paths = getPostPaths(slug, date)
+    const { postDirPath, blogFilePath } = paths
 
     // Get the existing post content to verify user ownership
     let existingFile, existingContent
@@ -407,8 +425,7 @@ ${description}
     if (files && files.length > 0) {
       files.forEach((file, index) => {
         if (file.mimeType && file.mimeType.startsWith("image/")) {
-          const imageFileName = `${slug}-${file.filename}`
-          const imagePath = `${postDirPath}/${imageFileName}`
+          const { imagePath } = getPostPaths(slug, date, file.filename)
 
           // Add image reference to post content
           postContent += `
