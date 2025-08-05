@@ -63,7 +63,7 @@ layout: default
 
         <!-- Selected Files Preview -->
         <div id="selectedFilesContainer" class="mt-4 hidden">
-          <h4 class="text-gray-600 font-medium mb-2">📋 Uploaded Files:</h4>
+          <h4 class="text-gray-600 font-medium mb-2">📋 Attached Files:</h4>
           <div id="uploadedFilesList" class="space-y-2"></div>
         </div>
       </div>
@@ -118,7 +118,7 @@ layout: default
   const existingImagesContainer = document.getElementById("existingImagesContainer")
   const existingImagesList = document.getElementById("existingImagesList")
 
-  let uploadedFiles = []
+  let attachedFiles = []
   let existingImages = []
   let deletedFiles = []
 
@@ -246,16 +246,20 @@ layout: default
 
   // File selection
   filesInput.addEventListener("change", (e) => {
-    uploadedFiles = Array.from(e.target.files)
+    const files = Array.from(e.target.files)
+    attachedFiles = [...attachedFiles, ...files]
+
     displayUploadedFiles()
   })
 
   function displayUploadedFiles() {
-    if (uploadedFiles.length > 0) {
+    console.log("uploaded files -", attachedFiles)
+
+    if (attachedFiles.length > 0) {
       selectedFilesContainer.classList.remove("hidden")
       uploadedFilesList.innerHTML = ""
 
-      uploadedFiles.forEach((file, index) => {
+      attachedFiles.forEach((file, index) => {
         const fileElement = document.createElement("div")
         fileElement.className = "flex items-center justify-between bg-gray-50 p-3 rounded-lg border"
         fileElement.innerHTML = `
@@ -278,12 +282,12 @@ layout: default
   }
 
   function removeSelectedFile(index) {
-    uploadedFiles.splice(index, 1)
+    attachedFiles.splice(index, 1)
     displayUploadedFiles()
 
     // Update the file input
     const dt = new DataTransfer()
-    uploadedFiles.forEach((file) => dt.items.add(file))
+    attachedFiles.forEach((file) => dt.items.add(file))
     filesInput.files = dt.files
   }
 
@@ -303,12 +307,12 @@ layout: default
     fileUploadArea.classList.remove("border-orange-500", "bg-orange-50")
 
     const files = Array.from(e.dataTransfer.files)
-    uploadedFiles = [...uploadedFiles, ...files]
+    attachedFiles = [...attachedFiles, ...files]
     displayUploadedFiles()
 
     // Update the file input
     const dt = new DataTransfer()
-    uploadedFiles.forEach((file) => dt.items.add(file))
+    attachedFiles.forEach((file) => dt.items.add(file))
     filesInput.files = dt.files
   })
 
@@ -340,7 +344,7 @@ layout: default
       formData.append("description", document.getElementById("description").value)
 
       // Add multiple files
-      uploadedFiles.forEach((file, index) => {
+      attachedFiles.forEach((file, index) => {
         formData.append(`files`, file)
       })
 
