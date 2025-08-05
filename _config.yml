@@ -28,3 +28,17 @@ defaults:
       layout: 'topic'
 
 # Note: Removed image file exclusions to allow assets/images/ to be processed
+
+# Only process markdown files as posts
+include:
+  - "_posts/**/*.md"
+
+# Exclude non-markdown files from being processed as posts
+exclude:
+  - "_posts/**/*.png"
+  - "_posts/**/*.jpg"
+  - "_posts/**/*.jpeg"
+  - "_posts/**/*.gif"
+  - "_posts/**/*.svg"
+  - "_posts/**/*.ico"
+  - "_posts/**/*.webp"
