@@ -13,6 +13,7 @@ layout: default
   <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
     <form id="submissionForm" enctype="multipart/form-data" class="space-y-6">
       <!-- Hidden fields for edit mode -->
+      <input type="hidden" id="date" name="date" value="" />
       <input type="hidden" id="slug" name="slug" value="" />
       <input type="hidden" id="deletedFiles" name="deletedFiles" value="" />
 
@@ -144,6 +145,7 @@ layout: default
 
       // Store the slug for form submission (just the slug part, not the full date-slug)
       document.getElementById("slug").value = slug
+      document.getElementById("date").value = postDate
       // Construct the full slug in format YYYY-MM-DD-slug for loading
       const fullPostSlug = `${postDate}-${slug}`
 
@@ -341,6 +343,7 @@ layout: default
       const slug = document.getElementById("slug").value
       if (slug) {
         formData.append("slug", slug)
+        formData.append("date", document.getElementById("date").value)
       }
 
       // Add deleted files list

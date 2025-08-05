@@ -235,7 +235,7 @@ async function createNewPost(title, description, files, userCookie) {
     const postDate = now.toISOString()
 
     // Create slug from title
-    const postSlug = title
+    const slug = title
       .toLowerCase()
       .replace(/[^a-z0-9\s-]/g, "")
       .replace(/\s+/g, "-")
@@ -243,7 +243,7 @@ async function createNewPost(title, description, files, userCookie) {
       .trim("-")
 
     // Create directory name for the blog post
-    const postDirName = `${dateStr}-${postSlug}`
+    const postDirName = `${dateStr}-${slug}`
     const postDirPath = `_posts/${postDirName}`
     const blogFilePath = `${postDirPath}/index.md`
 
@@ -253,7 +253,7 @@ layout: post
 title: "${title}"
 date: ${postDate}
 author: Anonymous
-slug: ${postSlug}
+slug: ${slug}
 user_cookie: ${userCookie || "anonymous"}
 ---
 
@@ -268,7 +268,7 @@ ${description}
     if (files && files.length > 0) {
       files.forEach((file, index) => {
         if (file.mimeType && file.mimeType.startsWith("image/")) {
-          const imageFileName = `${dateStr}-${postSlug}-${file.filename}`
+          const imageFileName = `${dateStr}-${slug}-${file.filename}`
           const imagePath = `${postDirPath}/${imageFileName}`
 
           // Add image reference to post content
@@ -303,7 +303,7 @@ ${description}
       postUrl: `http://20.42.15.153:4001/iyc/${dateObj.getFullYear()}/${String(dateObj.getMonth() + 1).padStart(
         2,
         "0"
-      )}/${String(dateObj.getDate()).padStart(2, "0")}/${postSlug}.html`,
+      )}/${String(dateObj.getDate()).padStart(2, "0")}/${slug}.html`,
       githubUrl: result.githubUrl,
     }
   } catch (error) {
@@ -313,11 +313,11 @@ ${description}
 }
 
 // Function to edit an existing blog post with multiple images
-async function editPost(slug, title, description, files, deletedFiles, userCookie) {
+async function editPost(slug, date, title, description, files, deletedFiles, userCookie) {
   try {
     // Construct the path using the slug pattern
-    const blogFilePath = `_posts/${slug}/index.md`
-    const postDirPath = `_posts/${slug}`
+    const blogFilePath = `_posts/${date}-${slug}/index.md`
+    const postDirPath = `_posts/${date}-${slug}`
 
     // Get the existing post content to verify user ownership
     let existingFile, existingContent
@@ -345,19 +345,13 @@ async function editPost(slug, title, description, files, deletedFiles, userCooki
       throw new Error("Unauthorized: You can only edit posts you created")
     }
 
-    // Extract existing date and slug to preserve them
-    const dateMatch = existingContent.match(/date:\s*(.+)/)
-    const slugMatch = existingContent.match(/slug:\s*(.+)/)
-    const postDate = dateMatch ? dateMatch[1].trim() : new Date().toISOString()
-    const postSlug = slugMatch ? slugMatch[1].trim() : slug
-
     // Create updated Jekyll front matter and content
     let postContent = `---
 layout: post
 title: "${title}"
-date: ${postDate}
+date: ${date}
 author: Anonymous
-slug: ${postSlug}
+slug: ${slug}
 user_cookie: ${userCookie}
 ---
 
@@ -413,7 +407,7 @@ ${description}
     if (files && files.length > 0) {
       files.forEach((file, index) => {
         if (file.mimeType && file.mimeType.startsWith("image/")) {
-          const imageFileName = `${postSlug}-${file.filename}`
+          const imageFileName = `${slug}-${file.filename}`
           const imagePath = `${postDirPath}/${imageFileName}`
 
           // Add image reference to post content
@@ -442,13 +436,13 @@ ${description}
     const result = await createSingleCommit(filesToProcess, `Update blog post: ${title}`)
 
     // Extract date components for URL
-    const dateObj = new Date(postDate)
+    const dateObj = new Date(date)
     return {
       success: true,
       postUrl: `http://20.42.15.153:4001/iyc/${dateObj.getFullYear()}/${String(dateObj.getMonth() + 1).padStart(
         2,
         "0"
-      )}/${String(dateObj.getDate()).padStart(2, "0")}/${postSlug}.html`,
+      )}/${String(dateObj.getDate()).padStart(2, "0")}/${slug}.html`,
       githubUrl: result.githubUrl,
     }
   } catch (error) {

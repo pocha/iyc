@@ -47,12 +47,14 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       })
 
       // Extract form data
-      const { title, description, slug, deletedFiles } = fields
+      const { title, description, slug, date, deletedFiles } = fields
 
       // Extract user cookie from request headers or fields
-      let userCookie = req.headers["x-user-cookie"] || 
-                      req.headers["cookie"]?.match(/forum_user_id=([^;]+)/)?.[1] || 
-                      fields.userCookie || null
+      let userCookie =
+        req.headers["x-user-cookie"] ||
+        req.headers["cookie"]?.match(/forum_user_id=([^;]+)/)?.[1] ||
+        fields.userCookie ||
+        null
 
       // Generate user cookie if not present
       userCookie = getOrCreateUserCookie(userCookie)
@@ -72,10 +74,10 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       let result
       if (isEdit) {
         // Parse deleted files if provided
-        const deletedFilesList = deletedFiles ? deletedFiles.split(',').filter(f => f.trim()) : []
-        
+        const deletedFilesList = deletedFiles ? deletedFiles.split(",").filter((f) => f.trim()) : []
+
         // Edit existing post
-        result = await editPost(slug, title, description, files, deletedFilesList, userCookie)
+        result = await editPost(slug, date, title, description, files, deletedFilesList, userCookie)
       } else {
         // Create new post
         result = await createNewPost(title, description, files, userCookie)
