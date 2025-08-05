@@ -25,6 +25,23 @@ exports.deletePost = functions.region("asia-south1").https.onRequest(async (req,
 
       console.log(`Attempting to delete post: ${postSlug}`)
 
+      // Get current branch reference to get the latest SHA
+      const branchRef = await octokit.rest.git.getRef({
+        owner: GITHUB_OWNER,
+        repo: GITHUB_REPO,
+        ref: `heads/${GITHUB_BRANCH}`,
+      })
+      const currentSha = branchRef.data.object.sha
+
+      // Get the current tree
+      const treeResponse = await octokit.rest.git.getTree({
+        owner: GITHUB_OWNER,
+        repo: GITHUB_REPO,
+        tree_sha: currentSha,
+        recursive: true,
+      })
+      const treeData = treeResponse.data
+
       // Create array of files to delete by targeting specific paths
       const filesToProcess = []
 
@@ -43,6 +60,13 @@ exports.deletePost = functions.region("asia-south1").https.onRequest(async (req,
       })
 
       console.log(`Files to delete: ${filesToProcess.map((f) => f.path).join(", ")}`)
+
+      if (filesToProcess.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: "No files found for the specified post slug",
+        })
+      }
 
       // Use createSingleCommit to delete all files in one commit
       const result = await createSingleCommit(filesToProcess, `Delete post: ${postSlug}`, currentSha)
