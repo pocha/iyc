@@ -37,7 +37,7 @@ function getPostPaths(slug, date, imageFileName = null) {
 
   // Add imagePath if imageFileName is provided
   if (imageFileName) {
-    paths.imagePath = `${postDirPath}/${date}-${slug}-${imageFileName}`
+    paths.imagePath = `${postDirPath}/${imageFileName}`
   }
 
   return paths
