@@ -30,7 +30,7 @@ test.describe('Forum End-to-End Tests', () => {
     await page.click('button[type="submit"]');
     
     // Wait for redirect to home page and verify post exists
-    await page.waitForURL('**/iyc/', { timeout: 10000 });
+    await page.waitForURL('**/iyc/', { timeout: 7000 });
     await expect(page.locator('text=Test Post with Multiple Images')).toBeVisible();
     
     // Step 2: Navigate to the created post and add a comment
@@ -74,7 +74,7 @@ test.describe('Forum End-to-End Tests', () => {
       await page.click('button[type="submit"]');
       
       // Wait for redirect and verify update
-      await page.waitForURL('**/iyc/', { timeout: 10000 });
+      await page.waitForURL('**/iyc/', { timeout: 7000 });
       await expect(page.locator('text=Updated Test Post with Multiple Images')).toBeVisible();
     }
     
@@ -96,7 +96,7 @@ test.describe('Forum End-to-End Tests', () => {
       }
       
       // Wait for redirect to home page
-      await page.waitForURL('**/iyc/', { timeout: 10000 });
+      await page.waitForURL('**/iyc/', { timeout: 7000 });
       
       // Verify post is deleted
       await expect(page.locator('text=Updated Test Post with Multiple Images')).not.toBeVisible();
