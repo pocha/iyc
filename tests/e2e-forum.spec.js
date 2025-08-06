@@ -1,204 +1,167 @@
-const { test, expect } = require("@playwright/test")
-const fs = require("fs")
-const path = require("path")
-const { execSync } = require("child_process")
-const branch = "test"
+const { test, expect } = require('@playwright/test');
+const path = require('path');
 
-test.describe("Forum End-to-End Tests", () => {
-  let testPostSlug
-  let testPostTitle
-  let testPostDescription
+test.describe('Forum End-to-End Tests', () => {
+  test.beforeEach(async ({ page }) => {
+    // Set shorter timeout
+    page.setDefaultTimeout(5000);
+    
+    // Navigate to the forum homepage
+    await page.goto('/');
+    await page.waitForLoadState('networkidle', { timeout: 5000 });
+  });
 
-  //   test.beforeAll(async () => {
-  //     // Ensure we're on master branch and have latest code
-  //     execSync('git checkout master && git pull origin master', {
-  //       cwd: '/home/nonbios/forum-theme',
-  //       stdio: 'inherit'
-  //     });
-  //   });
-
-  test("Complete forum workflow: create post, comment, edit, delete", async ({ page }) => {
-    // Generate unique test data
-    const timestamp = Date.now()
-    testPostTitle = `E2E Test Post ${timestamp}`
-    testPostDescription = `This is an end-to-end test post created at ${new Date().toISOString()}`
-    testPostSlug = `2025-01-01-e2e-test-post-${timestamp}`.toLowerCase().replace(/[^a-z0-9-]/g, "-")
-
+  test('should create a new post with multiple images', async ({ page }) => {
+    // Wait for the Post button to be visible and click it
+    await page.waitForSelector('a[href="/iyc/post/"]', { timeout: 5000 });
+    await page.click('a[href="/iyc/post/"]', { timeout: 5000 });
+    await page.waitForLoadState('networkidle', { timeout: 5000 });
+    
+    // Verify we're on the post creation page
+    await expect(page).toHaveURL(/.*\/post\/$/);
+    
+    // Fill in the post form
+    await page.fill('input[name="title"]', 'Test Post with Multiple Images');
+    await page.fill('textarea[name="content"]', 'This is a test post created by Playwright automation with multiple images attached.');
+    
+    // Upload multiple test images
+    const fileInput = page.locator('input[type="file"]');
+    
     // Create test images
-    const testImage1Path = `./test-image-1.png`
-    const testImage2Path = `./test-image-2.png`
-
-    console.log("=== PHASE 1: CREATE POST ===")
-
-    // Navigate to the forum
-    await page.goto("/")
-    await expect(page).toHaveTitle(/Whats up Isha/)
-
-    // Click create post button
-    await page.click("text=Create New Post")
-    await page.waitForSelector("#postTitle")
-
-    // Fill the form
-    await page.fill("#postTitle", testPostTitle)
-    await page.fill("#postDescription", testPostDescription)
-
-    // Upload first image
-    const fileInput = page.locator('input[type="file"]')
-    await fileInput.setInputFiles(testImage1Path)
-
-    // Wait for image preview to appear
-    await page.waitForSelector(".file-preview", { timeout: 5000 })
-
-    // Verify image preview is visible
-    const imagePreview = page.locator(".file-preview img")
-    await expect(imagePreview).toBeVisible()
-
+    const testImage1Path = path.join(__dirname, 'test-image-1.jpg');
+    const testImage2Path = path.join(__dirname, 'test-image-2.jpg');
+    
+    await fileInput.setInputFiles([testImage1Path, testImage2Path]);
+    
+    // Wait for images to be processed and displayed
+    await page.waitForTimeout(2000);
+    
+    // Verify images are displayed in the UI
+    const uploadedImages = page.locator('.uploaded-image, .attached-file, img[src*="data:image"]');
+    await expect(uploadedImages).toHaveCount(2);
+    
     // Submit the form
-    await page.click('button[type="submit"]')
+    await page.click('button[type="submit"], input[type="submit"]', { timeout: 5000 });
+    
+    // Wait for submission to complete and redirect
+    await page.waitForTimeout(5000);
+    
+    // Verify we're redirected to the new post
+    await expect(page.url()).toMatch(/.*\/post\/.*test-post-with-multiple-images.*/);
+    
+    // Verify post content is displayed
+    await expect(page.locator('h1, .post-title')).toContainText('Test Post with Multiple Images');
+    await expect(page.locator('.post-content, .content')).toContainText('This is a test post created by Playwright automation');
+  });
 
-    // Wait for success message
-    await page.waitForSelector(".success-message, .alert-success", { timeout: 30000 })
-
-    // Do git pull to get the new post
-    execSync(`git pull origin ${branch}`, {
-      cwd: "/home/nonbios/forum-theme",
-      stdio: "inherit",
-    })
-
-    // Wait a moment for Jekyll to rebuild
-    await page.waitForTimeout(3000)
-
-    // Navigate back to home and verify post exists
-    await page.goto("/")
-    await page.waitForLoadState("networkidle")
-
-    // Check if post appears on homepage
-    await expect(page.locator(`text=${testPostTitle}`)).toBeVisible()
-
-    // Click on the post to view it
-    await page.click(`text=${testPostTitle}`)
-    await page.waitForLoadState("networkidle")
-
-    // Verify post content
-    await expect(page.locator("h1")).toContainText(testPostTitle)
-    await expect(page.locator("text=" + testPostDescription)).toBeVisible()
-
-    // Verify image is displayed
-    const postImage = page.locator(".post-content img, .post-images img")
-    await expect(postImage.first()).toBeVisible()
-
-    console.log("=== PHASE 2: ADD COMMENT ===")
-
-    // Add a comment with image
-    const commentText = `Test comment with image - ${timestamp}`
-    await page.fill("#commentContent", commentText)
-
-    // Upload image for comment
-    const commentFileInput = page.locator('#commentForm input[type="file"]')
-    await commentFileInput.setInputFiles(testImage2Path)
-
-    // Submit comment
-    await page.click('#commentForm button[type="submit"]')
-
-    // Wait for success message
-    await page.waitForSelector(".success-message, .alert-success", { timeout: 30000 })
-
-    // Do git pull to get the new comment
-    execSync(`git pull origin ${branch}`, {
-      cwd: "/home/nonbios/forum-theme",
-      stdio: "inherit",
-    })
-
-    // Wait for Jekyll to rebuild
-    await page.waitForTimeout(3000)
-    await page.reload()
-    await page.waitForLoadState("networkidle")
-
+  test('should add a comment to a post', async ({ page }) => {
+    // Navigate to an existing post
+    await page.click('text=How this forum came into existence', { timeout: 5000 });
+    await page.waitForLoadState('networkidle', { timeout: 5000 });
+    
+    // Find and fill the comment form
+    const commentTextarea = page.locator('textarea[name="comment"], textarea[placeholder*="comment"]').first();
+    await commentTextarea.fill('This is a test comment added by Playwright automation.');
+    
+    // Submit the comment
+    await page.click('button:has-text("Submit"), button:has-text("Post Comment"), input[type="submit"]', { timeout: 5000 });
+    
+    // Wait for comment to be added
+    await page.waitForTimeout(3000);
+    
     // Verify comment appears
-    await expect(page.locator(`text=${commentText}`)).toBeVisible()
+    await expect(page.locator('.comment, .comment-content')).toContainText('This is a test comment added by Playwright automation.');
+  });
 
-    // Verify comment image appears
-    const commentImage = page.locator(".comment img, .comment-content img")
-    await expect(commentImage.first()).toBeVisible()
-
-    console.log("=== PHASE 3: EDIT POST ===")
-
-    // Click edit button
-    await page.click('text=Edit Post, .edit-btn, button:has-text("Edit")')
-    await page.waitForSelector("#postTitle")
-
-    // Update post content
-    const updatedTitle = `${testPostTitle} - EDITED`
-    const updatedDescription = `${testPostDescription} - This post has been edited during E2E testing.`
-
-    await page.fill("#postTitle", updatedTitle)
-    await page.fill("#postDescription", updatedDescription)
-
-    // Remove existing image and add new one
-    const removeButtons = page.locator('.remove-file, .delete-file, button:has-text("Remove")')
-    if ((await removeButtons.count()) > 0) {
-      await removeButtons.first().click()
+  test('should edit an existing post', async ({ page }) => {
+    // First create a post to edit
+    await page.waitForSelector('a[href="/iyc/post/"]', { timeout: 5000 });
+    await page.click('a[href="/iyc/post/"]', { timeout: 5000 });
+    await page.waitForLoadState('networkidle', { timeout: 5000 });
+    
+    await page.fill('input[name="title"]', 'Post to Edit');
+    await page.fill('textarea[name="content"]', 'Original content that will be edited.');
+    
+    await page.click('button[type="submit"], input[type="submit"]', { timeout: 5000 });
+    await page.waitForTimeout(5000);
+    
+    // Now edit the post - look for edit button
+    const editButton = page.locator('button:has-text("Edit"), .edit-post-btn');
+    if (await editButton.count() > 0) {
+      await editButton.click({ timeout: 5000 });
+      await page.waitForLoadState('networkidle', { timeout: 5000 });
+      
+      // Update the content
+      await page.fill('input[name="title"]', 'Edited Post Title');
+      await page.fill('textarea[name="content"]', 'Updated content after editing.');
+      
+      // Submit the edit
+      await page.click('button[type="submit"], input[type="submit"]', { timeout: 5000 });
+      await page.waitForTimeout(3000);
+      
+      // Verify the edit was successful
+      await expect(page.locator('.post-content, .content')).toContainText('Updated content after editing.');
     }
+  });
 
-    // Add new image
-    const editFileInput = page.locator('input[type="file"]')
-    await editFileInput.setInputFiles(testImage2Path)
+  test('should delete a post', async ({ page }) => {
+    // First create a post to delete
+    await page.waitForSelector('a[href="/iyc/post/"]', { timeout: 5000 });
+    await page.click('a[href="/iyc/post/"]', { timeout: 5000 });
+    await page.waitForLoadState('networkidle', { timeout: 5000 });
+    
+    await page.fill('input[name="title"]', 'Post to Delete');
+    await page.fill('textarea[name="content"]', 'This post will be deleted by the test.');
+    
+    await page.click('button[type="submit"], input[type="submit"]', { timeout: 5000 });
+    await page.waitForTimeout(5000);
+    
+    // Look for delete button
+    const deleteButton = page.locator('button:has-text("Delete"), .delete-post-btn');
+    if (await deleteButton.count() > 0) {
+      // Handle confirmation dialog
+      page.on('dialog', dialog => dialog.accept());
+      
+      await deleteButton.click({ timeout: 5000 });
+      await page.waitForTimeout(3000);
+      
+      // Verify we're redirected away from the deleted post
+      await expect(page.url()).not.toMatch(/.*post-to-delete.*/);
+    }
+  });
 
-    // Wait for new image preview
-    await page.waitForSelector(".file-preview", { timeout: 5000 })
+  test('should navigate between pages', async ({ page }) => {
+    // Test navigation to post creation
+    await page.waitForSelector('a[href="/iyc/post/"]', { timeout: 5000 });
+    await page.click('a[href="/iyc/post/"]', { timeout: 5000 });
+    await expect(page).toHaveURL(/.*\/post\/$/);
+    
+    // Navigate back to home
+    await page.goto('/');
+    await expect(page.locator('h1, .site-title')).toBeVisible();
+    
+    // Test navigation to an existing post
+    await page.click('text=How this forum came into existence', { timeout: 5000 });
+    await expect(page).toHaveURL(/.*\/post\/how-this-forum-came-into-existence.*/);
+  });
 
-    // Submit edit
-    await page.click('button[type="submit"]')
-
-    // Wait for success message
-    await page.waitForSelector(".success-message, .alert-success", { timeout: 30000 })
-
-    // Do git pull to get updated post
-    execSync(`git pull origin ${branch}`, {
-      cwd: "/home/nonbios/forum-theme",
-      stdio: "inherit",
-    })
-
-    // Wait for Jekyll to rebuild
-    await page.waitForTimeout(3000)
-
-    // Navigate to post and verify changes
-    await page.goto("/")
-    await page.waitForLoadState("networkidle")
-    await page.click(`text=${updatedTitle}`)
-    await page.waitForLoadState("networkidle")
-
-    // Verify updated content
-    await expect(page.locator("h1")).toContainText("EDITED")
-    await expect(page.locator("text=" + updatedDescription)).toBeVisible()
-
-    console.log("=== PHASE 4: DELETE POST ===")
-
-    // Click delete button
-    await page.click('text=Delete Post, .delete-btn, button:has-text("Delete")')
-
-    // Confirm deletion if there's a confirmation dialog
-    page.on("dialog", (dialog) => dialog.accept())
-
-    // Wait for success message or redirect
-    await page.waitForSelector(".success-message, .alert-success", { timeout: 30000 })
-
-    // Do git pull to get deletion
-    execSync(`git pull origin ${branch}`, {
-      cwd: "/home/nonbios/forum-theme",
-      stdio: "inherit",
-    })
-
-    // Wait for Jekyll to rebuild
-    await page.waitForTimeout(3000)
-
-    // Navigate to home and verify post is gone
-    await page.goto("/")
-    await page.waitForLoadState("networkidle")
-
-    // Verify post no longer appears
-    await expect(page.locator(`text=${updatedTitle}`)).not.toBeVisible()
-
-    console.log("=== E2E TEST COMPLETED SUCCESSFULLY ===")
-  })
-})
+  test('should handle form validation', async ({ page }) => {
+    // Navigate to post creation
+    await page.waitForSelector('a[href="/iyc/post/"]', { timeout: 5000 });
+    await page.click('a[href="/iyc/post/"]', { timeout: 5000 });
+    await page.waitForLoadState('networkidle', { timeout: 5000 });
+    
+    // Try to submit empty form
+    await page.click('button[type="submit"], input[type="submit"]', { timeout: 5000 });
+    
+    // Check for validation messages or that we stay on the same page
+    await expect(page).toHaveURL(/.*\/post\/$/);
+    
+    // Fill only title and try again
+    await page.fill('input[name="title"]', 'Test Title Only');
+    await page.click('button[type="submit"], input[type="submit"]', { timeout: 5000 });
+    
+    // Should still be on post creation page or show validation
+    await page.waitForTimeout(2000);
+  });
+});

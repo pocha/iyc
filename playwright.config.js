@@ -8,11 +8,14 @@ module.exports = defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: 1,
   reporter: 'html',
+  timeout: 5000, // Set global test timeout to 5 seconds
   use: {
-    baseURL: 'http://localhost:4000/iyc/',
+    baseURL: 'http://localhost:4001/iyc/',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    actionTimeout: 5000, // Set action timeout to 5 seconds
+    navigationTimeout: 5000, // Set navigation timeout to 5 seconds
   },
 
   projects: [
@@ -23,8 +26,8 @@ module.exports = defineConfig({
   ],
 
   webServer: {
-    command: 'jekyll serve --port 4000 --host 0.0.0.0',
-    url: 'http://localhost:4000/iyc/',
+    command: 'jekyll serve --port 4001 --host 0.0.0.0 --watch',
+    url: 'http://localhost:4001/iyc/',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },
