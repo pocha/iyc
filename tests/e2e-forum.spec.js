@@ -65,15 +65,16 @@ test.describe("Forum End-to-End Tests", () => {
     await page.waitForLoadState("networkidle")
 
     await expect(page.locator("text=Test Post with Multiple Images")).toBeVisible()
+
+    await page.click("text=Test Post with Multiple Images")
+    await page.waitForLoadState("networkidle")
+
+    // check if title, description & images are as expected
+
     return
 
     // Step 2: Navigate to the created post and add a comment
     console.log("Step 2: Adding a comment to the post...")
-    await page.click("text=Test Post with Multiple Images")
-
-    // Wait for post page to load
-    await page.waitForLoadState("networkidle")
-
     // Add a comment with image
     await page.fill('textarea[name="comment"]', "This is a test comment with an image.")
 
