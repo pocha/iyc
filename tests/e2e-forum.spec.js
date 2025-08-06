@@ -21,8 +21,9 @@ async function gitPull() {
   })
 }
 
-const jekyllRebuildTime = 7000
+const jekyllRebuildTime = 3000
 const fileAttachTime = 2000
+const firebaseProcessTime = 7000
 
 test.describe("Forum End-to-End Tests", () => {
   test("should perform complete forum workflow: create post, add comment, edit post, and delete post", async ({
@@ -54,7 +55,7 @@ test.describe("Forum End-to-End Tests", () => {
     // await page.click('button[type="submit"]')
 
     // // Wait for the green success notification to appear
-    // await page.waitForSelector(".bg-green-100", { timeout: 7000 })
+    // await page.waitForSelector(".bg-green-100", { timeout: firebaseProcessTime })
 
     // await gitPull()
     // console.log("Successfully pulled latest changes")
@@ -89,6 +90,7 @@ test.describe("Forum End-to-End Tests", () => {
 
     // Submit the comment
     await page.click('button:has-text("Submit Comment")')
+    await page.waitForSelector(".text-green-600", { timeout: firebaseProcessTime })
 
     // Wait for comment to appear
     await gitPull()
