@@ -1,10 +1,10 @@
 ---
 layout: post
 title: "Test Post with Multiple Images"
-date: 2025-08-06T11:18:55.249Z
+date: 2025-08-06T11:22:19.477Z
 author: Anonymous
 slug: test-post-with-multiple-images
-user_cookie: user_gat4q7aao_1754479134909
+user_cookie: user_bhu86wyz0_1754479339099
 ---
 
 This is a test post with multiple images for end-to-end testing.
