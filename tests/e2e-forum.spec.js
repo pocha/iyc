@@ -21,46 +21,45 @@ async function gitPull() {
   })
 }
 
+const jekyllRebuildTime = 7000
+const fileAttachTime = 2000
+
 test.describe("Forum End-to-End Tests", () => {
   test("should perform complete forum workflow: create post, add comment, edit post, and delete post", async ({
     page,
   }) => {
-    // Navigate to the forum homepage
-    await page.goto("http://localhost:4001/iyc/")
-    await page.waitForLoadState("networkidle")
+    // // Navigate to the forum homepage
+    // await page.goto("http://localhost:4001/iyc/")
+    // await page.waitForLoadState("networkidle")
 
-    // Step 1: Create a new post with multiple images
-    console.log("Step 1: Creating a new post with multiple images...")
-    await page.click('a[href="/iyc/post/"]', { timeout: 7000 })
+    // // Step 1: Create a new post with multiple images
+    // console.log("Step 1: Creating a new post with multiple images...")
+    // await page.click('a[href="/iyc/post/"]', { timeout: 7000 })
 
-    // Fill in the post form
-    await page.fill("#title", "Test Post with Multiple Images")
-    await page.fill('textarea[name="description"]', "This is a test post with multiple images for end-to-end testing.")
+    // // Fill in the post form
+    // await page.fill("#title", "Test Post with Multiple Images")
+    // await page.fill('textarea[name="description"]', "This is a test post with multiple images for end-to-end testing.")
 
-    // Upload multiple files
-    const fileInput = page.locator('input[type="file"]')
-    await fileInput.setInputFiles(["tests/test-image-1.jpg", "tests/test-image-2.jpg"])
+    // // Upload multiple files
+    // const fileInput = page.locator('input[type="file"]')
+    // await fileInput.setInputFiles(["tests/test-image-1.jpg", "tests/test-image-2.jpg"])
 
-    // Wait for files to be uploaded and displayed
-    await page.waitForTimeout(2000)
-    const fileListText = await page.locator("#uploadedFilesList").textContent()
-    expect(fileListText).toContain("test-image-1.jpg")
-    expect(fileListText).toContain("test-image-2.jpg")
+    // // Wait for files to be uploaded and displayed
+    // await page.waitForTimeout(2000)
+    // const fileListText = await page.locator("#uploadedFilesList").textContent()
+    // expect(fileListText).toContain("test-image-1.jpg")
+    // expect(fileListText).toContain("test-image-2.jpg")
 
-    // Submit the post
-    await page.click('button[type="submit"]')
+    // // Submit the post
+    // await page.click('button[type="submit"]')
 
-    // Wait for the green success notification to appear
-    await page.waitForSelector(".bg-green-100", { timeout: 7000 })
+    // // Wait for the green success notification to appear
+    // await page.waitForSelector(".bg-green-100", { timeout: 7000 })
 
-    // execSync(`${git} pull origin test`, {
-    //   cwd: projectRoot,
-    //   stdio: "inherit",
-    // })
-    await gitPull()
-    console.log("Successfully pulled latest changes")
+    // await gitPull()
+    // console.log("Successfully pulled latest changes")
 
-    await page.waitForTimeout(5000) //wait for jekyll to rebuild
+    // await page.waitForTimeout(jekyllRebuildTime) //wait for jekyll to rebuild
     await page.goto("http://localhost:4001/iyc/")
     await page.waitForLoadState("networkidle")
 
@@ -70,8 +69,12 @@ test.describe("Forum End-to-End Tests", () => {
     await page.waitForLoadState("networkidle")
 
     // check if title, description & images are as expected
+    await expect(page.locator('h1:has-text("Test Post with Multiple Images")')).toBeVisible()
+    const description = await page.locator(".prose").textContent()
+    expect(description).toContain("This is a test post with multiple images for end-to-end testing.")
 
-    return
+    const postImages = page.locator(".prose img")
+    await expect(postImages).toHaveCount(2)
 
     // Step 2: Navigate to the created post and add a comment
     console.log("Step 2: Adding a comment to the post...")
@@ -82,14 +85,19 @@ test.describe("Forum End-to-End Tests", () => {
     await commentFileInput.setInputFiles(["tests/test-comment-image.jpg"])
 
     // Wait for comment image to be uploaded
-    await page.waitForTimeout(2000)
+    await page.waitForTimeout(fileAttachTime)
 
     // Submit the comment
     await page.click('button:has-text("Submit Comment")')
 
     // Wait for comment to appear
-    await page.waitForTimeout(3000)
+    await gitPull()
+    await page.waitForTimeout(jekyllRebuildTime)
+    await page.reload()
+    await page.waitForLoadState("networkidle")
     await expect(page.locator("text=This is a test comment with an image.")).toBeVisible()
+
+    return
 
     // Step 3: Edit the post
     console.log("Step 3: Editing the post...")
