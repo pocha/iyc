@@ -4,6 +4,7 @@ baseurl: '/iyc'
 url: ''
 github_user: 'pocha'
 github_branch: 'master'
+firebase_url: 'https://asia-south1-isocnet-2d37f.cloudfunctions.net'
 
 markdown: kramdown
 highlighter: rouge
@@ -31,14 +32,14 @@ defaults:
 
 # Only process markdown files as posts
 include:
-  - "_posts/**/*.md"
+  - '_posts/**/*.md'
 
 # Exclude non-markdown files from being processed as posts
 exclude:
-  - "_posts/**/*.png"
-  - "_posts/**/*.jpg"
-  - "_posts/**/*.jpeg"
-  - "_posts/**/*.gif"
-  - "_posts/**/*.svg"
-  - "_posts/**/*.ico"
-  - "_posts/**/*.webp"
+  - '_posts/**/*.png'
+  - '_posts/**/*.jpg'
+  - '_posts/**/*.jpeg'
+  - '_posts/**/*.gif'
+  - '_posts/**/*.svg'
+  - '_posts/**/*.ico'
+  - '_posts/**/*.webp'
