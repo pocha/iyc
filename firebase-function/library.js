@@ -21,7 +21,7 @@ const octokit = new Octokit({
 
 // CORS configuration
 const corsHandler = cors({
-  origin: ["http://20.42.15.153:4001", "https://pocha.github.io"],
+  origin: ["http://20.42.15.153:4001", "https://pocha.github.io", "http://localhost:4001"],
   methods: ["GET", "POST", "OPTIONS"],
 })
 
