@@ -38,7 +38,7 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
       }
 
       // Parse multipart data with comment specific options
-      const { fields, fileData, fileName, fileType } = await parseMultipartData(req, {
+      const { fields, files } = await parseMultipartData(req, {
         fileSize: 5 * 1024 * 1024, // 5MB limit for comments
         allowedFileField: "image",
         imageOnly: true,
@@ -73,21 +73,26 @@ message: ${comment}`
       const filesToCreate = []
 
       // Handle image attachment if present
-      if (fileData && fileName && fileType && fileType.startsWith("image/")) {
-        const imageFileName = `comment-${timeStr}-${fileName}`
-        const imagePath = `_posts/${postSlug}/${imageFileName}`
+      if (files && files.length > 0) {
+        const file = files[0] // Get first file for comments
+        const { filename, mimeType, buffer } = file
 
-        // Add image reference to comment content
-        const imageUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/_posts/${postSlug}/${imageFileName}?raw=true`
-        commentContent += `
+        if (mimeType && mimeType.startsWith("image/")) {
+          const imageFileName = `comment-${timeStr}-${filename}`
+          const imagePath = `_posts/${postSlug}/${imageFileName}`
+
+          // Add image reference to comment content
+          const imageUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/_posts/${postSlug}/${imageFileName}?raw=true`
+          commentContent += `
 image: ${imageUrl}`
 
-        // Add image file to the commit
-        filesToCreate.push({
-          path: imagePath,
-          content: Buffer.from(fileData).toString("base64"),
-          encoding: "base64",
-        })
+          // Add image file to the commit
+          filesToCreate.push({
+            path: imagePath,
+            content: buffer.toString("base64"),
+            encoding: "base64",
+          })
+        }
       }
 
       // Create comment file in the Staticman structure
