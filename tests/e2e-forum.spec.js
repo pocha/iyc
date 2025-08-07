@@ -165,22 +165,19 @@ test.describe("Forum End-to-End Tests", () => {
 
     expect(page.locator('button:has-text("Delete")')).toBeVisible()
 
+    // dialog need to be registered before the delete button is clicked
+    page.on("dialog", async (dialog) => {
+      dialog.accept()
+    })
     // Click delete button
     const deleteButton = page.locator('button:has-text("Delete")')
     await deleteButton.click()
 
-    await page.pause()
+    //await page.pause()
 
-    // Confirm deletion if there's a confirmation dialog
-    await page.waitForTimeout(1000)
-    page.on("dialog", async (dialog) => {
-      dialog.accept()
-    })
-    await page.waitForEvent("dialog", { timeout: firebaseProcessTime })
+    await page.waitForTimeout(1000) // wait for confirm dialog to come up, the dialog registered will click ok
 
-    page.on("dialog", async (dialog) => {
-      dialog.accept()
-    })
+    await page.waitForEvent("dialog", { timeout: firebaseProcessTime }) // waiting for another dialog to show after deletion, it will also be clicked ok
 
     await doGitPullAndNavigateToHome(page)
 
