@@ -169,6 +169,8 @@ test.describe("Forum End-to-End Tests", () => {
     const deleteButton = page.locator('button:has-text("Delete")')
     await deleteButton.click()
 
+    await page.pause()
+
     // Confirm deletion if there's a confirmation dialog
     await page.waitForTimeout(1000)
     page.on("dialog", async (dialog) => {
