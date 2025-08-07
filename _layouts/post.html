@@ -57,7 +57,7 @@ layout: default
       <h3 class="text-xl font-bold text-gray-900 mb-4">Comments</h3>
 
       <!-- Display Comments -->
-      <div class="space-y-4 mb-6">
+      <div class="space-y-4 mb-6" id="commentsContainer">
         {% assign post_slug = page.date | date: "%Y-%m-%d" | append: "-" | append: page.slug %}
         {% assign post_slug = page.date | date: "%Y-%m-%d" | append: "-" | append: page.slug %}
         {% assign comments = site.data.comments[post_slug] %}

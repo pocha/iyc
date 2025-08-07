@@ -6,6 +6,7 @@ const postTitle = "Test Post with Multiple Images"
 const updatedPostTitle = "Updated -" + postTitle
 const postDescription = "This is a test post with multiple images for end-to-end testing."
 const updatedDescription = "This post has been updated during end-to-end testing."
+const homeUrl = "http://localhost:4001/iyc/"
 
 const jekyllRebuildTime = 7000
 const fileAttachTime = 2000
@@ -16,7 +17,7 @@ test.describe("Forum End-to-End Tests", () => {
     page,
   }) => {
     // Navigate to the forum homepage
-    await page.goto("http://localhost:4001/iyc/")
+    await page.goto(homeUrl)
     await page.waitForLoadState("networkidle")
 
     //==================
@@ -86,14 +87,14 @@ test.describe("Forum End-to-End Tests", () => {
 
     // check comment text & image
     await expect(page.locator("text=This is a test comment with an image.")).toBeVisible()
-    postImages = page.locator(".prose img")
-    await expect(postImages).toHaveCount(3)
+    postImages = page.locator("#commentsContainer img")
+    await expect(postImages).toHaveCount(1)
 
     //=============
     // Step 3: Edit the post
     //=============
     console.log("Step 3: Editing the post...")
-    await page.goto("http://localhost:4001/iyc/")
+    await page.goto(homeUrl)
     await page.waitForLoadState("networkidle")
 
     await expect(page.locator('button:has-text("Edit")')).toBeVisible()
@@ -145,7 +146,7 @@ test.describe("Forum End-to-End Tests", () => {
     // Step 4: Delete the post
     //========
     console.log("Step 4: Deleting the post...")
-    await page.goto("http://localhost:4001/iyc/")
+    await page.goto(homeUrl)
     await page.waitForLoadState("networkidle")
     await page.click(`text=${updatedPostTitle}`)
     await page.waitForLoadState("networkidle")
@@ -195,6 +196,6 @@ async function doGitPullAndNavigateToHome(page) {
   await gitPull()
   console.log("Successfully pulled latest changes")
   await page.waitForTimeout(jekyllRebuildTime) //wait for jekyll to rebuild
-  await page.goto("http://localhost:4001/iyc/")
+  await page.goto(homeUrl)
   await page.waitForLoadState("networkidle")
 }
