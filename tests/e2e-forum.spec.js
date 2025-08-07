@@ -158,11 +158,11 @@ test.describe("Forum End-to-End Tests", () => {
     // expect(firstImageSrc).toContain("test-image-2")
 
     // Step 4: Delete the post
-    // console.log("Step 4: Deleting the post...")
-    // await page.goto("http://localhost:4001/iyc/")
-    // await page.waitForLoadState("networkidle")
-    // await page.click("text=Updated Test Post with Multiple Images")
-    // await page.waitForLoadState("networkidle")
+    console.log("Step 4: Deleting the post...")
+    await page.goto("http://localhost:4001/iyc/")
+    await page.waitForLoadState("networkidle")
+    await page.click("text=Updated Test Post with Multiple Images")
+    await page.waitForLoadState("networkidle")
 
     // Click delete button
     const deleteButton = page.locator('button:has-text("Delete")')
