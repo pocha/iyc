@@ -1,17 +1,15 @@
 ---
 layout: post
-title: "Updated -Test Post with Multiple Images"
-date: 2025-08-07
+title: "Test Post with Multiple Images"
+date: 2025-08-07T09:18:10.508Z
 author: Anonymous
 slug: test-post-with-multiple-images
-user_cookie: user_n1hi6rkq8_1754556088109
+user_cookie: user_w10iv6onx_1754558290109
 ---
 
-This post has been updated during end-to-end testing.
+This is a test post with multiple images for end-to-end testing.
 
 
-![comment-2025-08-07T08:41:49.261Z-test-comment-image.jpg](https://github.com/pocha/iyc/blob/test/_posts/2025-08-07-test-post-with-multiple-images/comment-2025-08-07T08:41:49.261Z-test-comment-image.jpg?raw=true)
+![test-image-1.jpg](https://github.com/pocha/iyc/blob/test/_posts/2025-08-07-test-post-with-multiple-images/test-image-1.jpg?raw=true)
 
 ![test-image-2.jpg](https://github.com/pocha/iyc/blob/test/_posts/2025-08-07-test-post-with-multiple-images/test-image-2.jpg?raw=true)
-
-![test-image-3.jpg](https://github.com/pocha/iyc/blob/test/_posts/2025-08-07-test-post-with-multiple-images/test-image-3.jpg?raw=true)
