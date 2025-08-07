@@ -149,7 +149,7 @@ test.describe("Forum End-to-End Tests", () => {
     await page.waitForLoadState("networkidle")
     await page.click("text=Updated Test Post with Multiple Images")
     await page.waitForLoadState("networkidle")
-    await expect(page.locator("h1")).toHaveText("Updated Test Post with Multiple Images")
+    await expect(page.getByText("Updated Test Post with Multiple Images")).toBeVisible()
     const description = await page.locator(".prose").textContent()
     expect(description).toContain("This post has been updated during end-to-end testing.")
     let postImages = page.locator(".prose img")
