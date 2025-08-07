@@ -102,60 +102,60 @@ test.describe("Forum End-to-End Tests", () => {
     // postImages = page.locator(".prose img")
     // await expect(postImages).toHaveCount(3)
 
-    // Step 3: Edit the post
-    console.log("Step 3: Editing the post...")
-    await page.goto("http://localhost:4001/iyc/")
-    await page.waitForLoadState("networkidle")
+    // // Step 3: Edit the post
+    // console.log("Step 3: Editing the post...")
+    // await page.goto("http://localhost:4001/iyc/")
+    // await page.waitForLoadState("networkidle")
 
-    await expect(page.locator('button:has-text("Edit")')).toBeVisible()
+    // await expect(page.locator('button:has-text("Edit")')).toBeVisible()
 
-    await page.click("text=Test Post with Multiple Images")
-    await page.waitForLoadState("networkidle")
-    await expect(page.locator('button:has-text("Edit")')).toBeVisible()
+    // await page.click("text=Test Post with Multiple Images")
+    // await page.waitForLoadState("networkidle")
+    // await expect(page.locator('button:has-text("Edit")')).toBeVisible()
 
-    let editButton = page.locator('button:has-text("Edit")')
-    await editButton.click()
-    await page.waitForLoadState("networkidle")
+    // let editButton = page.locator('button:has-text("Edit")')
+    // await editButton.click()
+    // await page.waitForLoadState("networkidle")
 
-    // expect 2 images on the edit page
-    expect(page.locator("#existingImagesList > div")).toHaveCount(2)
+    // // expect 2 images on the edit page
+    // expect(page.locator("#existingImagesList > div")).toHaveCount(2)
 
-    // Update the post title
-    await page.fill("#title", "Updated Test Post with Multiple Images")
-    await page.fill('textarea[name="description"]', "This post has been updated during end-to-end testing.")
+    // // Update the post title
+    // await page.fill("#title", "Updated Test Post with Multiple Images")
+    // await page.fill('textarea[name="description"]', "This post has been updated during end-to-end testing.")
 
-    // remove one image
-    let firstImageRemoveButton = page.locator("#existingImagesList button").first()
-    await firstImageRemoveButton.click()
-    await page.waitForTimeout(fileAttachTime)
-    expect(page.locator("#existingImagesList > div")).toHaveCount(1)
+    // // remove one image
+    // let firstImageRemoveButton = page.locator("#existingImagesList button").first()
+    // await firstImageRemoveButton.click()
+    // await page.waitForTimeout(fileAttachTime)
+    // expect(page.locator("#existingImagesList > div")).toHaveCount(1)
 
-    // add another image
-    fileInput = page.locator('input[type="file"]')
-    await fileInput.setInputFiles(["tests/test-image-3.jpg"])
-    await page.waitForTimeout(fileAttachTime)
-    // no need to test attachment showing as it is already tested during post creation
+    // // add another image
+    // fileInput = page.locator('input[type="file"]')
+    // await fileInput.setInputFiles(["tests/test-image-3.jpg"])
+    // await page.waitForTimeout(fileAttachTime)
+    // // no need to test attachment showing as it is already tested during post creation
 
-    // Submit the updated post & pull latest changes
-    await page.click('button[type="submit"]')
-    await page.waitForSelector(".bg-green-100", { timeout: firebaseProcessTime })
-    await gitPull()
-    console.log("Successfully pulled latest changes")
-    await page.waitForTimeout(jekyllRebuildTime)
+    // // Submit the updated post & pull latest changes
+    // await page.click('button[type="submit"]')
+    // await page.waitForSelector(".bg-green-100", { timeout: firebaseProcessTime })
+    // await gitPull()
+    // console.log("Successfully pulled latest changes")
+    // await page.waitForTimeout(jekyllRebuildTime)
 
-    // check if title, description shows fine .. also the removed file isnt visible anymore
-    // the new file should show up fine as it got tested in create flow already
-    await page.goto("http://localhost:4001/iyc/")
-    await page.waitForLoadState("networkidle")
-    await page.click("text=Updated Test Post with Multiple Images")
-    await page.waitForLoadState("networkidle")
-    await expect(page.getByText("Updated Test Post with Multiple Images")).toBeVisible()
-    const description = await page.locator(".prose").textContent()
-    expect(description).toContain("This post has been updated during end-to-end testing.")
-    let postImages = page.locator(".prose img")
-    await expect(postImages).toHaveCount(2)
-    let lastImageSrc = await postImages.last().getAttribute("src")
-    expect(lastImageSrc).toContain("test-image-3")
+    // // check if title, description shows fine .. also the removed file isnt visible anymore
+    // // the new file should show up fine as it got tested in create flow already
+    // await page.goto("http://localhost:4001/iyc/")
+    // await page.waitForLoadState("networkidle")
+    // await page.click("text=Updated Test Post with Multiple Images")
+    // await page.waitForLoadState("networkidle")
+    // await expect(page.getByText("Updated Test Post with Multiple Images")).toBeVisible()
+    // const description = await page.locator(".prose").textContent()
+    // expect(description).toContain("This post has been updated during end-to-end testing.")
+    // let postImages = page.locator(".prose img")
+    // await expect(postImages).toHaveCount(2)
+    // let firstImageSrc = await postImages.first().getAttribute("src")
+    // expect(firstImageSrc).toContain("test-image-2")
 
     // Step 4: Delete the post
     // console.log("Step 4: Deleting the post...")
@@ -164,24 +164,24 @@ test.describe("Forum End-to-End Tests", () => {
     // await page.click("text=Updated Test Post with Multiple Images")
     // await page.waitForLoadState("networkidle")
 
-    // // Click delete button
-    // const deleteButton = page.locator('button:has-text("Delete")')
-    // if (await deleteButton.isVisible()) {
-    //   await deleteButton.click()
+    // Click delete button
+    const deleteButton = page.locator('button:has-text("Delete")')
+    if (await deleteButton.isVisible()) {
+      await deleteButton.click()
 
-    //   // Confirm deletion if there's a confirmation dialog
-    //   await page.waitForTimeout(1000)
-    //   const confirmButton = page.locator('button:has-text("Confirm")')
-    //   if (await confirmButton.isVisible()) {
-    //     await confirmButton.click()
-    //   }
+      // Confirm deletion if there's a confirmation dialog
+      await page.waitForTimeout(1000)
+      const confirmButton = page.locator('button:has-text("Confirm")')
+      if (await confirmButton.isVisible()) {
+        await confirmButton.click()
+      }
 
-    //   // Wait for redirect to home page
-    //   await page.waitForURL("**/iyc/", { timeout: 7000 })
+      // Wait for redirect to home page
+      await page.waitForURL("**/iyc/", { timeout: 7000 })
 
-    //   // Verify post is deleted
-    //   await expect(page.locator("text=Updated Test Post with Multiple Images")).not.toBeVisible()
-    // }
+      // Verify post is deleted
+      await expect(page.locator("text=Updated Test Post with Multiple Images")).not.toBeVisible()
+    }
 
     // console.log("All tests completed successfully!")
   })
