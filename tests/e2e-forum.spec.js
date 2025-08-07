@@ -174,7 +174,7 @@ test.describe("Forum End-to-End Tests", () => {
     page.on("dialog", async (dialog) => {
       dialog.accept()
     })
-    page.waitForEvent("dialog", { timeout: firebaseProcessTime })
+    await page.waitForEvent("dialog", { timeout: firebaseProcessTime })
 
     page.on("dialog", async (dialog) => {
       dialog.accept()
