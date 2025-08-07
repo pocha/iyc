@@ -65,7 +65,7 @@ test.describe("Forum End-to-End Tests", () => {
     // Wait for the green success notification to appear
     await page.waitForSelector(".bg-green-100", { timeout: firebaseProcessTime })
 
-    doGitPullAndNavigateToHome(page)
+    await doGitPullAndNavigateToHome(page)
 
     // await expect(page.locator("text=Test Post with Multiple Images")).toBeVisible()
 
@@ -144,7 +144,7 @@ test.describe("Forum End-to-End Tests", () => {
     // await page.click('button[type="submit"]')
     // await page.waitForSelector(".bg-green-100", { timeout: firebaseProcessTime })
 
-    // doGitPullAndNavigateToHome(page)
+    // await doGitPullAndNavigateToHome(page)
 
     // await page.click("text=Updated Test Post with Multiple Images")
     // await page.waitForLoadState("networkidle")
@@ -180,7 +180,7 @@ test.describe("Forum End-to-End Tests", () => {
       dialog.accept()
     })
 
-    doGitPullAndNavigateToHome(page)
+    await doGitPullAndNavigateToHome(page)
 
     // Verify post is deleted
     await expect(page.locator("text=Test Post with Multiple Images")).not.toBeVisible()
