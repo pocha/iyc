@@ -414,7 +414,7 @@ ${description}
 
     // Add remaining existing images to post content (those not deleted)
     existingImages.forEach((image) => {
-      if (!deletedFiles || !deletedFiles.includes(image.name)) {
+      if ((!deletedFiles || !deletedFiles.includes(image.name)) && !image.name.startsWith("comment-")) {
         postContent += `
 ![${image.name}](https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${image.path}?raw=true)
 `
