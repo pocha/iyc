@@ -39,10 +39,10 @@ module.exports = defineConfig({
   globalSetup: require.resolve("./tests/global-setup.js"),
 
   // Remove webServer config since Jekyll is already running on port 4001
-  // webServer: {
-  //   command: 'jekyll serve --port 4001 --host 0.0.0.0 --watch',
-  //   url: 'http://localhost:4001/iyc/',
-  //   reuseExistingServer: !process.env.CI,
-  //   timeout: 120 * 1000,
-  // },
+  webServer: {
+    command: "jekyll serve --port 4001 --host 0.0.0.0 --watch",
+    url: "http://localhost:4001/iyc/",
+    reuseExistingServer: !process.env.CI,
+    timeout: 120 * 1000,
+  },
 })
