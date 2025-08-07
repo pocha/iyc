@@ -20,6 +20,14 @@ async function gitPull() {
   })
 }
 
+async function doGitPullAndNavigateToHome(page) {
+  await gitPull()
+  console.log("Successfully pulled latest changes")
+  await page.waitForTimeout(jekyllRebuildTime) //wait for jekyll to rebuild
+  await page.goto("http://localhost:4001/iyc/")
+  await page.waitForLoadState("networkidle")
+}
+
 const jekyllRebuildTime = 7000
 const fileAttachTime = 2000
 const firebaseProcessTime = 7000
@@ -34,7 +42,8 @@ test.describe("Forum End-to-End Tests", () => {
 
     // Step 1: Create a new post with multiple images
     console.log("Step 1: Creating a new post with multiple images...")
-    await page.click('a[href="/iyc/post/"]', { timeout: 7000 })
+    await page.click('a[href="/iyc/post/"]')
+    await page.waitForLoadState("networkidle")
 
     // Fill in the post form
     await page.fill("#title", "Test Post with Multiple Images")
@@ -56,12 +65,7 @@ test.describe("Forum End-to-End Tests", () => {
     // Wait for the green success notification to appear
     await page.waitForSelector(".bg-green-100", { timeout: firebaseProcessTime })
 
-    await gitPull()
-    console.log("Successfully pulled latest changes")
-    await page.waitForTimeout(jekyllRebuildTime) //wait for jekyll to rebuild
-
-    // await page.goto("http://localhost:4001/iyc/")
-    // await page.waitForLoadState("networkidle")
+    doGitPullAndNavigateToHome(page)
 
     // await expect(page.locator("text=Test Post with Multiple Images")).toBeVisible()
 
@@ -139,14 +143,9 @@ test.describe("Forum End-to-End Tests", () => {
     // // Submit the updated post & pull latest changes
     // await page.click('button[type="submit"]')
     // await page.waitForSelector(".bg-green-100", { timeout: firebaseProcessTime })
-    // await gitPull()
-    // console.log("Successfully pulled latest changes")
-    // await page.waitForTimeout(jekyllRebuildTime)
 
-    // // check if title, description shows fine .. also the removed file isnt visible anymore
-    // // the new file should show up fine as it got tested in create flow already
-    // await page.goto("http://localhost:4001/iyc/")
-    // await page.waitForLoadState("networkidle")
+    // doGitPullAndNavigateToHome(page)
+
     // await page.click("text=Updated Test Post with Multiple Images")
     // await page.waitForLoadState("networkidle")
     // await expect(page.getByText("Updated Test Post with Multiple Images")).toBeVisible()
@@ -161,27 +160,30 @@ test.describe("Forum End-to-End Tests", () => {
     console.log("Step 4: Deleting the post...")
     await page.goto("http://localhost:4001/iyc/")
     await page.waitForLoadState("networkidle")
-    await page.click("text=Updated Test Post with Multiple Images")
+    await page.click("text=Test Post with Multiple Images")
     await page.waitForLoadState("networkidle")
+
+    expect(page.locator('button:has-text("Delete")')).toBeVisible()
 
     // Click delete button
     const deleteButton = page.locator('button:has-text("Delete")')
-    if (await deleteButton.isVisible()) {
-      await deleteButton.click()
+    await deleteButton.click()
 
-      // Confirm deletion if there's a confirmation dialog
-      await page.waitForTimeout(1000)
-      const confirmButton = page.locator('button:has-text("Confirm")')
-      if (await confirmButton.isVisible()) {
-        await confirmButton.click()
-      }
+    // Confirm deletion if there's a confirmation dialog
+    await page.waitForTimeout(1000)
+    page.on("dialog", async (dialog) => {
+      dialog.accept()
+    })
+    page.waitForEvent("dialog", { timeout: firebaseProcessTime })
 
-      // Wait for redirect to home page
-      await page.waitForURL("**/iyc/", { timeout: 7000 })
+    page.on("dialog", async (dialog) => {
+      dialog.accept()
+    })
 
-      // Verify post is deleted
-      await expect(page.locator("text=Updated Test Post with Multiple Images")).not.toBeVisible()
-    }
+    doGitPullAndNavigateToHome(page)
+
+    // Verify post is deleted
+    await expect(page.locator("text=Test Post with Multiple Images")).not.toBeVisible()
 
     // console.log("All tests completed successfully!")
   })
