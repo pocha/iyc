@@ -162,7 +162,10 @@ layout: default
 
       try {
         const formData = new FormData(e.target)
-
+		const imageInput = document.getElementById('image')
+		if (!imageInput.files || imageInput.files.length === 0 || imageInput.files[0].size === 0) {
+			formData.delete('image')
+		}
         const response = await fetch("{{ site.firebase_url }}/submitComment", {
           method: "POST",
           body: formData,
