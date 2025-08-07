@@ -20,7 +20,7 @@ async function gitPull() {
   })
 }
 
-const jekyllRebuildTime = 3000
+const jekyllRebuildTime = 7000
 const fileAttachTime = 2000
 const firebaseProcessTime = 7000
 
