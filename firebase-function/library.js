@@ -147,6 +147,38 @@ const generateUserCookie = () => {
 const getOrCreateUserCookie = (existingCookie) => {
   return existingCookie && existingCookie.trim() !== "" ? existingCookie : generateUserCookie()
 }
+// Helper function to get triggered workflow after commit
+async function getTriggeredWorkflow(commitSha) {
+  try {
+    // Wait a moment for GitHub to process the commit
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    // Get workflow runs triggered by this commit
+    const { data: workflowRuns } = await octokit.rest.actions.listWorkflowRunsForRepo({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      head_sha: commitSha,
+      per_page: 1,
+      status: 'queued,in_progress,completed'
+    })
+    
+    if (workflowRuns.workflow_runs && workflowRuns.workflow_runs.length > 0) {
+      const workflow = workflowRuns.workflow_runs[0]
+      return {
+        workflow_id: workflow.id,
+        workflow_created_at: workflow.created_at,
+        workflow_status: workflow.status,
+        workflow_url: workflow.html_url
+      }
+    }
+    
+    return null
+  } catch (error) {
+    console.error("Error getting triggered workflow:", error)
+    return null
+  }
+}
+
 
 // Generic function to create a single commit with multiple files
 async function createSingleCommit(files, commitMessage) {
@@ -234,10 +266,16 @@ async function createSingleCommit(files, commitMessage) {
       sha: newCommit.sha,
     })
 
+    // Get workflow data after commit
+    const workflowData = await getTriggeredWorkflow(newCommit.sha)
     return {
       success: true,
       commitSha: newCommit.sha,
       githubUrl: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/commit/${newCommit.sha}`,
+      workflow_id: workflowData?.workflow_id || null,
+      workflow_created_at: workflowData?.workflow_created_at || null,
+      workflow_status: workflowData?.workflow_status || null,
+      workflow_url: workflowData?.workflow_url || null
     }
   } catch (error) {
     console.error("Error creating single commit:", error)

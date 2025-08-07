@@ -88,10 +88,9 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
         success: true,
         message: isEdit ? "Blog post updated successfully!" : "Blog post submitted successfully!",
         data: {
+          ...result,
           title: title,
           description: description,
-          postUrl: result.postUrl,
-          githubUrl: result.githubUrl,
           submittedAt: new Date().toISOString(),
           operation: isEdit ? "update" : "create",
           userCookie: userCookie,
