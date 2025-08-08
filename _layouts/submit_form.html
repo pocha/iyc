@@ -369,13 +369,13 @@ layout: default
         // Show success message
         successMessage.classList.remove("hidden")
 
-        if (window.workflowTracker) {
+        if (window.workflowTracker && result.workflowId) {
           const slug = document.getElementById("slug").value
           if (!slug) {
             // New post submission
-            window.workflowTracker.trackSubmission("post", "new-post", result.workflowId || "unknown")
+            window.workflowTracker.trackSubmission("post", "new-post", result.workflowId)
           } else {
-            window.workflowTracker.trackSubmission("edit", slug, result.workflowId || "unknown")
+            window.workflowTracker.trackSubmission("edit", slug, result.workflowId)
           }
         }
       } else {
