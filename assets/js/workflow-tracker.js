@@ -12,7 +12,6 @@ class WorkflowTracker {
 
   init() {
     this.checkAndUpdateUI();
-    this.setupPeriodicCheck();
   }
 
   // Get active submissions from localStorage
@@ -57,44 +56,80 @@ class WorkflowTracker {
   updateUI() {
     this.updateNewPostForm();
     this.updateEditLinks();
+    this.blockEditPostForm();
+  }
+
+  // Generic function to block/unblock a form
+  blockForm(formElement, submitButton, isBlocked, blockMessage, enabledButtonText, blockedButtonText) {
+    if (!formElement) return;
+
+    if (isBlocked) {
+      // Grey out form
+      formElement.style.opacity = '0.5';
+      formElement.style.pointerEvents = 'none';
+      
+      // Disable submit button
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = blockedButtonText;
+      }
+
+      // Show notification
+      this.showNotification(blockMessage);
+    } else {
+      // Enable form
+      formElement.style.opacity = '1';
+      formElement.style.pointerEvents = 'auto';
+      
+      // Enable submit button
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = enabledButtonText;
+      }
+
+      // Hide notification
+      this.hideNotification();
+    }
   }
 
   // Update new post form
   updateNewPostForm() {
     const postForm = document.getElementById('postForm');
     const submitButton = document.getElementById('submitBtn');
-    const notification = document.getElementById('submission-notification');
     
-    if (!postForm) return;
-
     const hasActivePostSubmission = this.isSubmissionActive('post', 'new');
 
-    if (hasActivePostSubmission) {
-      // Grey out form
-      postForm.style.opacity = '0.5';
-      postForm.style.pointerEvents = 'none';
-      
-      // Disable submit button
-      if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.textContent = 'Submission in Progress...';
-      }
+    this.blockForm(
+      postForm,
+      submitButton,
+      hasActivePostSubmission,
+      'A new post submission is already in progress. Please wait for it to complete.',
+      'Submit Post',
+      'Submission in Progress...'
+    );
+  }
 
-      // Show notification
-      this.showNotification('A new post submission is already in progress. Please wait for it to complete.');
-    } else {
-      // Enable form
-      postForm.style.opacity = '1';
-      postForm.style.pointerEvents = 'auto';
+  // Block edit post form on edit page
+  blockEditPostForm() {
+    // Check if we're on an edit page
+    const currentPath = window.location.pathname;
+    const editMatch = currentPath.match(/\/edit\/(.+)/);
+    
+    if (editMatch) {
+      const postSlug = editMatch[1];
+      const editForm = document.getElementById('editForm') || document.getElementById('postForm');
+      const submitButton = document.getElementById('updateBtn') || document.getElementById('submitBtn');
       
-      // Enable submit button
-      if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.textContent = 'Submit Post';
-      }
+      const hasActiveEditSubmission = this.isSubmissionActive('edit', postSlug);
 
-      // Hide notification
-      this.hideNotification();
+      this.blockForm(
+        editForm,
+        submitButton,
+        hasActiveEditSubmission,
+        'An edit submission is already in progress for this post. Please wait for it to complete.',
+        'Update Post',
+        'Edit in Progress...'
+      );
     }
   }
 
@@ -159,49 +194,56 @@ class WorkflowTracker {
     }
   }
 
-  // Check workflow status and update submissions
-  async checkWorkflowStatus() {
-    for (const [key, submission] of Object.entries(this.activeSubmissions)) {
-      try {
-        // Check if submission is older than 10 minutes (timeout)
-        if (Date.now() - submission.timestamp > 10 * 60 * 1000) {
-          console.log(`Submission ${key} timed out, removing from tracking`);
-          delete this.activeSubmissions[key];
-          continue;
-        }
-
-        // Here you would typically check the GitHub Actions workflow status
-        // For now, we'll implement a simple timeout-based cleanup
-        // In a real implementation, you'd call the GitHub API to check workflow status
-        
-      } catch (error) {
-        console.error(`Error checking workflow status for ${key}:`, error);
+  // Query GitHub workflow status
+  async queryWorkflowStatus(workflowId) {
+    try {
+      // This would typically call your backend API that checks GitHub Actions
+      // For now, returning a placeholder - you'll need to implement the actual API call
+      const response = await fetch(`/api/workflow-status/${workflowId}`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.status; // 'completed', 'in_progress', 'failed', etc.
       }
+      return null;
+    } catch (error) {
+      console.error(`Error querying workflow status for ${workflowId}:`, error);
+      return null;
     }
-    
-    this.saveActiveSubmissions();
-    this.updateUI();
-  }
-
-  // Setup periodic checking
-  setupPeriodicCheck() {
-    // Check every 30 seconds
-    setInterval(() => {
-      this.checkWorkflowStatus();
-    }, 30000);
   }
 
   // Check and update UI on page load
-  checkAndUpdateUI() {
-    // Clean up old submissions on page load
+  async checkAndUpdateUI() {
     const now = Date.now();
     let updated = false;
     
     for (const [key, submission] of Object.entries(this.activeSubmissions)) {
-      // Remove submissions older than 10 minutes
-      if (now - submission.timestamp > 10 * 60 * 1000) {
-        delete this.activeSubmissions[key];
-        updated = true;
+      const timeDiff = now - submission.timestamp;
+      
+      // If submission is older than 2 minutes, query workflow status
+      if (timeDiff > 2 * 60 * 1000) {
+        try {
+          const status = await this.queryWorkflowStatus(submission.workflowId);
+          
+          // If workflow is completed or failed, remove from tracking
+          if (status === 'completed' || status === 'failure' || status === 'cancelled') {
+            console.log(`Workflow ${submission.workflowId} completed with status: ${status}`);
+            delete this.activeSubmissions[key];
+            updated = true;
+          }
+          // If we can't get status and it's older than 10 minutes, assume it's done
+          else if (status === null && timeDiff > 10 * 60 * 1000) {
+            console.log(`Workflow ${submission.workflowId} timed out, removing from tracking`);
+            delete this.activeSubmissions[key];
+            updated = true;
+          }
+        } catch (error) {
+          console.error(`Error checking workflow status for ${key}:`, error);
+          // If error and older than 10 minutes, remove anyway
+          if (timeDiff > 10 * 60 * 1000) {
+            delete this.activeSubmissions[key];
+            updated = true;
+          }
+        }
       }
     }
     
