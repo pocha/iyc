@@ -38,6 +38,11 @@ class WorkflowTracker {
     this.updateUI();
   }
 
+  // Public method to add submission entry (alias for trackSubmission)
+  addSubmission(type, identifier, workflowId) {
+    return this.trackSubmission(type, identifier, workflowId);
+  }
+
   // Remove completed submission
   removeSubmission(type, identifier) {
     const key = `${type}_${identifier}`;
