@@ -77,7 +77,19 @@ class WorkflowTracker {
         // Also check if this is the post view page with edit links
         const postMatch = currentPath.match(/\/([^\/]+)$/);
         if (postMatch && postMatch[1] === identifier && !currentPath.includes('/edit/')) {
-          this.handlePostViewPage(identifier);
+          this.handlePostViewPage(identifier, 'edit');
+        }
+      } else if (type === 'delete') {
+        // Check if this is the post view page for the post being deleted
+        const postMatch = currentPath.match(/\/([^\/]+)$/);
+        if (postMatch && postMatch[1] === identifier && !currentPath.includes('/edit/')) {
+          this.handlePostViewPage(identifier, 'delete');
+        }
+        
+        // Also check if this is the edit page for the post being deleted
+        const editMatch = currentPath.match(/\/edit\/(.+)/);
+        if (editMatch && editMatch[1] === identifier) {
+          this.handleEditPage(identifier, 'delete');
         }
       }
     }
@@ -101,34 +113,70 @@ class WorkflowTracker {
   }
 
   // Handle edit page restrictions
-  handleEditPage(postSlug) {
+  handleEditPage(postSlug, conflictType = 'edit') {
     const editForm = document.getElementById('editForm') || document.getElementById('postForm');
     const submitButton = document.getElementById('updateBtn') || document.getElementById('submitBtn');
+    
+    let message = 'An edit submission is already in progress for this post. Please wait for it to complete.';
+    let progressText = 'Edit in Progress...';
+    
+    if (conflictType === 'delete') {
+      message = 'This post is currently being deleted. Edit is not available.';
+      progressText = 'Post Being Deleted...';
+    }
     
     this.blockForm(
       editForm,
       submitButton,
-      'An edit submission is already in progress for this post. Please wait for it to complete.',
+      message,
       'Update Post',
-      'Edit in Progress...'
+      progressText
     );
   }
 
-  // Handle post view page - grey out edit links if edit is in progress
-  handlePostViewPage(postSlug) {
-    const editLinks = document.querySelectorAll(`a[href*="/edit/${postSlug}"]`);
-    
-    editLinks.forEach(link => {
-      link.style.opacity = '0.5';
-      link.style.pointerEvents = 'none';
-      link.style.cursor = 'not-allowed';
+  // Handle post view page - grey out edit/delete links based on active operations
+  handlePostViewPage(postSlug, operationType) {
+    if (operationType === 'edit') {
+      // Grey out edit links when edit is in progress
+      const editLinks = document.querySelectorAll(`a[href*="/edit/${postSlug}"]`);
       
-      // Add tooltip or notification
-      link.title = 'Edit is currently in progress for this post';
-    });
-    
-    // Show notification
-    this.showNotification('An edit is currently in progress for this post.');
+      editLinks.forEach(link => {
+        link.style.opacity = '0.5';
+        link.style.pointerEvents = 'none';
+        link.style.cursor = 'not-allowed';
+        link.title = 'Edit is currently in progress for this post';
+      });
+      
+      this.showNotification('An edit is currently in progress for this post.');
+      
+    } else if (operationType === 'delete') {
+      // Grey out both edit and delete buttons when delete is in progress
+      const editLinks = document.querySelectorAll(`a[href*="/edit/${postSlug}"]`);
+      const deleteButtons = document.querySelectorAll(`button[onclick*="deletePost"], button[data-post-slug="${postSlug}"]`);
+      
+      // Disable edit links
+      editLinks.forEach(link => {
+        link.style.opacity = '0.5';
+        link.style.pointerEvents = 'none';
+        link.style.cursor = 'not-allowed';
+        link.title = 'This post is currently being deleted';
+      });
+      
+      // Disable delete buttons
+      deleteButtons.forEach(button => {
+        button.disabled = true;
+        button.style.opacity = '0.5';
+        button.style.cursor = 'not-allowed';
+        button.title = 'Delete is currently in progress';
+        
+        // Update button text if it contains "Delete"
+        if (button.textContent.toLowerCase().includes('delete')) {
+          button.textContent = 'Deleting...';
+        }
+      });
+      
+      this.showNotification('This post is currently being deleted.');
+    }
   }
 
   // Block form elements
