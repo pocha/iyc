@@ -225,11 +225,6 @@ class WorkflowTracker {
     document.body.appendChild(notification);
     
     // Auto-remove after 10 seconds
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.remove();
-      }
-    }, 10000);
   }
 
   // Check workflow status (placeholder for future implementation)
@@ -311,7 +306,8 @@ class WorkflowTracker {
 // Initialize workflow tracker when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
   window.workflowTracker = new WorkflowTracker();
-});
+  window.workflowTracker = new WorkflowTracker();
+  window.workflowTracker.checkAndApplyPageRestrictions();
 
 // Export for use in other scripts
 if (typeof module !== 'undefined' && module.exports) {
