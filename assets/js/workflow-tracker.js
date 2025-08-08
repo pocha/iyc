@@ -284,8 +284,9 @@ class WorkflowTracker {
         {
           method: "GET",
           headers: {
-            Accept: "application/vnd.github.v3+json",
-            "User-Agent": "forum-theme-app",
+            Accept: "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "forum-theme-app/1.0",
           },
         }
       )
