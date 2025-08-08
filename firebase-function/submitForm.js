@@ -84,18 +84,7 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       }
 
       // Send success response
-      res.status(200).json({
-        success: true,
-        message: isEdit ? "Blog post updated successfully!" : "Blog post submitted successfully!",
-        data: {
-          ...result,
-          title: title,
-          description: description,
-          submittedAt: new Date().toISOString(),
-          operation: isEdit ? "update" : "create",
-          userCookie: userCookie,
-        },
-      })
+      res.status(200).json(result)
     } catch (error) {
       console.error("Error in submitForm:", error)
       res.status(500).json({
