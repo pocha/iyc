@@ -220,50 +220,66 @@ class WorkflowTracker {
 
   // Check workflow status (placeholder for future implementation)
   // Retrieve workflow information for a commit SHA
-    async retrieveWorkflow(sha) {
-        try {
-            console.log(`Retrieving workflow for SHA: ${sha}`);
-            
-            // Use Firebase function to get workflow information
-            const firebaseUrl = document.querySelector('meta[name="firebase-url"]')?.getAttribute('content') || 'https://asia-south1-isocnet.cloudfunctions.net';
-            const url = `${firebaseUrl}/checkWorkflow?sha=${sha}`;
-            
-            console.log(`Making request to: ${url}`);
-            
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
+  // Retrieve workflow information for a commit SHA
+  async retrieveWorkflow(sha, maxRetries = 5, retryDelay = 5000) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Retrieving workflow for SHA: ${sha} (attempt ${attempt}/${maxRetries})`);
+        
+        // Use Firebase function to get workflow information
+        const firebaseUrl = document.querySelector('meta[name="firebase-url"]')?.getAttribute('content') || 'https://asia-south1-isocnet.cloudfunctions.net';
+        const url = `${firebaseUrl}/checkWorkflow?sha=${sha}`;
+        
+        console.log(`Making request to: ${url}`);
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log('Workflow data received:', data);
-
-            if (data.total_count === 0) {
-                console.log('No workflows found for this SHA');
-                return null;
-            }
-
-            // Return the first workflow run (most recent)
-            const workflowRun = data.workflow_runs[0];
-            return {
-                id: workflowRun.id,
-                status: workflowRun.status,
-                conclusion: workflowRun.conclusion,
-                created_at: workflowRun.created_at,
-                updated_at: workflowRun.updated_at
-            };
-
-        } catch (error) {
-            console.error('Error retrieving workflow:', error);
-            return null;
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
+
+        const data = await response.json();
+        console.log('Workflow data received:', data);
+
+        if (data.total_count === 0) {
+          if (attempt < maxRetries) {
+            console.log(`No workflows found for this SHA, retrying in ${retryDelay/1000} seconds...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            continue;
+          } else {
+            console.log('No workflows found for this SHA after all retries');
+            return null;
+          }
+        }
+
+        // Return the first workflow run (most recent)
+        const workflowRun = data.workflow_runs[0];
+        return {
+          id: workflowRun.id,
+          status: workflowRun.status,
+          conclusion: workflowRun.conclusion,
+          created_at: workflowRun.created_at,
+          updated_at: workflowRun.updated_at
+        };
+
+      } catch (error) {
+        console.error(`Error retrieving workflow (attempt ${attempt}/${maxRetries}):`, error);
+        
+        if (attempt < maxRetries) {
+          console.log(`Retrying in ${retryDelay/1000} seconds...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+        } else {
+          console.error('Failed to retrieve workflow after all retries');
+          return null;
+        }
+      }
     }
+  }
   async checkWorkflowStatus(workflowId) {
     try {
       console.log(`Checking workflow status for ID: ${workflowId}`);
