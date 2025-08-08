@@ -226,12 +226,14 @@ class WorkflowTracker {
     // Get GitHub configuration from Jekyll config
     const githubUser = window.jekyllConfig?.github_user || "pocha"
     const githubRepo = window.jekyllConfig?.github_repo || "iyc" // Repository name
+    const url = `https://api.github.com/repos/${githubUser}/${githubRepo}/actions/runs?head_sha=${commitSha}`
+	  console.log(url)
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         // Query GitHub API directly for workflow runs
         const response = await fetch(
-          `https://api.github.com/repos/${githubUser}/${githubRepo}/actions/runs?head_sha=${commitSha}`,
+          url,
           {
             method: "GET",
             headers: {
@@ -246,6 +248,7 @@ class WorkflowTracker {
         }
 
         const result = await response.json()
+	      console.log(result)
 
         if (result.workflow_runs && result.workflow_runs.length > 0) {
           const workflow = result.workflow_runs[0] // Get the most recent workflow
