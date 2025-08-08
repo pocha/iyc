@@ -368,6 +368,16 @@ layout: default
 
         // Show success message
         successMessage.classList.remove("hidden")
+
+        if (window.workflowTracker) {
+          const slug = document.getElementById("slug").value
+          if (!slug) {
+            // New post submission
+            window.workflowTracker.trackSubmission("post", "new-post", result.workflowId || "unknown")
+          } else {
+            window.workflowTracker.trackSubmission("edit", slug, result.workflowId || "unknown")
+          }
+        }
       } else {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
