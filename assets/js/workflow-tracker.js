@@ -220,7 +220,7 @@ class WorkflowTracker {
 
   // Check workflow status (placeholder for future implementation)
   // Retrieve workflow information for a commit SHA
-  async retrieveWorkflow(commitSha, maxRetries = 5, retryDelay = 2000) {
+  async retrieveWorkflow(commitSha, maxRetries = 5, retryDelay = 5000) {
     console.log(`Attempting to retrieve workflow for commit: ${commitSha}`)
 
     // Get GitHub configuration from Jekyll config
