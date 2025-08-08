@@ -217,11 +217,6 @@ layout: default
         const fullPostSlug = `${postDate}-${postSlug}`
 
         
-        // Track delete submission
-        if (window.workflowTracker) {
-          window.workflowTracker.trackSubmission('delete_' + fullPostSlug, 'Deleting post...');
-        }
-
         // Show loading state
         const deleteBtn = document.getElementById("deletePostBtn")
         const originalText = deleteBtn.innerHTML
