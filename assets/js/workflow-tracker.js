@@ -222,28 +222,31 @@ class WorkflowTracker {
   // Retrieve workflow information for a commit SHA
   async retrieveWorkflow(commitSha, maxRetries = 5, retryDelay = 2000) {
     console.log(`Attempting to retrieve workflow for commit: ${commitSha}`)
-    
+
     // Get GitHub configuration from Jekyll config
-    const githubUser = window.jekyllConfig?.github_user || 'pocha'
-    const githubRepo = 'forum-theme' // Repository name
-    
+    const githubUser = window.jekyllConfig?.github_user || "pocha"
+    const githubRepo = window.jekyllConfig?.github_repo || "iyc" // Repository name
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         // Query GitHub API directly for workflow runs
-        const response = await fetch(`https://api.github.com/repos/${githubUser}/${githubRepo}/actions/runs?head_sha=${commitSha}`, {
-          method: "GET",
-          headers: {
-            "Accept": "application/vnd.github.v3+json",
-            "User-Agent": "forum-theme-app"
-          },
-        })
+        const response = await fetch(
+          `https://api.github.com/repos/${githubUser}/${githubRepo}/actions/runs?head_sha=${commitSha}`,
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/vnd.github.v3+json",
+              "User-Agent": "forum-theme-app",
+            },
+          }
+        )
 
         if (!response.ok) {
           throw new Error(`GitHub API error! status: ${response.status}`)
         }
 
         const result = await response.json()
-        
+
         if (result.workflow_runs && result.workflow_runs.length > 0) {
           const workflow = result.workflow_runs[0] // Get the most recent workflow
           console.log(`Found workflow ${workflow.id} for commit ${commitSha}`)
@@ -251,36 +254,40 @@ class WorkflowTracker {
             workflowId: workflow.id,
             workflowStatus: workflow.status,
             workflowUrl: workflow.html_url,
-            workflowCreatedAt: workflow.created_at
+            workflowCreatedAt: workflow.created_at,
           }
         } else if (attempt < maxRetries) {
-          console.log(`Workflow not found for commit ${commitSha}, attempt ${attempt}/${maxRetries}. Retrying in ${retryDelay}ms...`)
-          await new Promise(resolve => setTimeout(resolve, retryDelay))
+          console.log(
+            `Workflow not found for commit ${commitSha}, attempt ${attempt}/${maxRetries}. Retrying in ${retryDelay}ms...`
+          )
+          await new Promise((resolve) => setTimeout(resolve, retryDelay))
         }
       } catch (error) {
         console.error(`Error retrieving workflow (attempt ${attempt}/${maxRetries}):`, error)
         if (attempt < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, retryDelay))
+          await new Promise((resolve) => setTimeout(resolve, retryDelay))
         }
       }
     }
-    
   }
 
   async checkWorkflowStatus(workflowId) {
     try {
       // Get GitHub configuration from Jekyll config
-      const githubUser = window.jekyllConfig?.github_user || 'pocha'
-      const githubRepo = 'forum-theme' // Repository name
+      const githubUser = window.jekyllConfig?.github_user || "pocha"
+      const githubRepo = "forum-theme" // Repository name
 
       // Query GitHub API directly for workflow status
-      const response = await fetch(`https://api.github.com/repos/${githubUser}/${githubRepo}/actions/runs/${workflowId}`, {
-        method: "GET",
-        headers: {
-          "Accept": "application/vnd.github.v3+json",
-          "User-Agent": "forum-theme-app"
-        },
-      })
+      const response = await fetch(
+        `https://api.github.com/repos/${githubUser}/${githubRepo}/actions/runs/${workflowId}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/vnd.github.v3+json",
+            "User-Agent": "forum-theme-app",
+          },
+        }
+      )
 
       if (!response.ok) {
         throw new Error(`GitHub API error! status: ${response.status}`)
