@@ -1,210 +1,224 @@
 /**
- * Workflow Tracker - User Blocking Functionality
- * Handles blocking/unblocking users and filtering content
+ * Workflow Tracker - Submission Progress Tracking
+ * Prevents users from making multiple simultaneous submissions
+ * while their previous submission is being processed
  */
 
 class WorkflowTracker {
   constructor() {
-    this.blockedUsers = this.getBlockedUsers();
+    this.activeSubmissions = this.getActiveSubmissions();
     this.init();
   }
 
   init() {
-    this.addBlockButtons();
-    this.filterBlockedContent();
-    this.setupEventListeners();
+    this.checkAndUpdateUI();
+    this.setupPeriodicCheck();
   }
 
-  // Get blocked users from localStorage
-  getBlockedUsers() {
-    const blocked = localStorage.getItem('blockedUsers');
-    return blocked ? JSON.parse(blocked) : [];
+  // Get active submissions from localStorage
+  getActiveSubmissions() {
+    const active = localStorage.getItem('activeSubmissions');
+    return active ? JSON.parse(active) : {};
   }
 
-  // Save blocked users to localStorage
-  saveBlockedUsers() {
-    localStorage.setItem('blockedUsers', JSON.stringify(this.blockedUsers));
+  // Save active submissions to localStorage
+  saveActiveSubmissions() {
+    localStorage.setItem('activeSubmissions', JSON.stringify(this.activeSubmissions));
   }
 
-  // Block a user
-  blockUser(username) {
-    if (!this.blockedUsers.includes(username)) {
-      this.blockedUsers.push(username);
-      this.saveBlockedUsers();
-      this.filterBlockedContent();
-      this.updateBlockButtons();
-      console.log(`User ${username} has been blocked`);
-    }
+  // Track a new submission
+  trackSubmission(type, identifier, workflowId) {
+    const key = `${type}_${identifier}`;
+    this.activeSubmissions[key] = {
+      type: type, // 'post' or 'edit'
+      identifier: identifier, // post slug for edits, 'new' for new posts
+      workflowId: workflowId,
+      timestamp: Date.now()
+    };
+    this.saveActiveSubmissions();
+    this.updateUI();
   }
 
-  // Unblock a user
-  unblockUser(username) {
-    const index = this.blockedUsers.indexOf(username);
-    if (index > -1) {
-      this.blockedUsers.splice(index, 1);
-      this.saveBlockedUsers();
-      this.filterBlockedContent();
-      this.updateBlockButtons();
-      console.log(`User ${username} has been unblocked`);
-    }
+  // Remove completed submission
+  removeSubmission(type, identifier) {
+    const key = `${type}_${identifier}`;
+    delete this.activeSubmissions[key];
+    this.saveActiveSubmissions();
+    this.updateUI();
   }
 
-  // Check if user is blocked
-  isUserBlocked(username) {
-    return this.blockedUsers.includes(username);
+  // Check if submission is active
+  isSubmissionActive(type, identifier) {
+    const key = `${type}_${identifier}`;
+    return this.activeSubmissions.hasOwnProperty(key);
   }
 
-  // Add block/unblock buttons to posts and comments
-  addBlockButtons() {
-    // Add buttons to posts
-    const postAuthors = document.querySelectorAll('.post-author, .author-name');
-    postAuthors.forEach(authorElement => {
-      const username = this.extractUsername(authorElement);
-      if (username && !authorElement.querySelector('.block-btn')) {
-        this.addBlockButton(authorElement, username);
-      }
-    });
-
-    // Add buttons to comments
-    const commentAuthors = document.querySelectorAll('.comment-author');
-    commentAuthors.forEach(authorElement => {
-      const username = this.extractUsername(authorElement);
-      if (username && !authorElement.querySelector('.block-btn')) {
-        this.addBlockButton(authorElement, username);
-      }
-    });
+  // Update UI based on active submissions
+  updateUI() {
+    this.updateNewPostForm();
+    this.updateEditLinks();
   }
 
-  // Extract username from author element
-  extractUsername(element) {
-    return element.textContent.trim().replace(/^By\s+/, '');
-  }
-
-  // Add block button to an author element
-  addBlockButton(authorElement, username) {
-    const isBlocked = this.isUserBlocked(username);
-    const button = document.createElement('button');
-    button.className = `block-btn ml-2 px-2 py-1 text-xs rounded ${
-      isBlocked 
-        ? 'bg-green-500 hover:bg-green-600 text-white' 
-        : 'bg-red-500 hover:bg-red-600 text-white'
-    }`;
-    button.textContent = isBlocked ? 'Unblock' : 'Block';
-    button.dataset.username = username;
+  // Update new post form
+  updateNewPostForm() {
+    const postForm = document.getElementById('postForm');
+    const submitButton = document.getElementById('submitBtn');
+    const notification = document.getElementById('submission-notification');
     
-    button.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (isBlocked) {
-        this.unblockUser(username);
-      } else {
-        this.blockUser(username);
-      }
-    });
+    if (!postForm) return;
 
-    authorElement.appendChild(button);
-  }
+    const hasActivePostSubmission = this.isSubmissionActive('post', 'new');
 
-  // Update all block buttons
-  updateBlockButtons() {
-    const blockButtons = document.querySelectorAll('.block-btn');
-    blockButtons.forEach(button => {
-      const username = button.dataset.username;
-      const isBlocked = this.isUserBlocked(username);
+    if (hasActivePostSubmission) {
+      // Grey out form
+      postForm.style.opacity = '0.5';
+      postForm.style.pointerEvents = 'none';
       
-      button.textContent = isBlocked ? 'Unblock' : 'Block';
-      button.className = `block-btn ml-2 px-2 py-1 text-xs rounded ${
-        isBlocked 
-          ? 'bg-green-500 hover:bg-green-600 text-white' 
-          : 'bg-red-500 hover:bg-red-600 text-white'
-      }`;
-    });
+      // Disable submit button
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Submission in Progress...';
+      }
+
+      // Show notification
+      this.showNotification('A new post submission is already in progress. Please wait for it to complete.');
+    } else {
+      // Enable form
+      postForm.style.opacity = '1';
+      postForm.style.pointerEvents = 'auto';
+      
+      // Enable submit button
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Submit Post';
+      }
+
+      // Hide notification
+      this.hideNotification();
+    }
   }
 
-  // Filter blocked content
-  filterBlockedContent() {
-    // Hide posts from blocked users
-    const posts = document.querySelectorAll('.post-item, .post-container, article');
-    posts.forEach(post => {
-      const authorElement = post.querySelector('.post-author, .author-name');
-      if (authorElement) {
-        const username = this.extractUsername(authorElement);
-        if (username && this.isUserBlocked(username)) {
-          post.style.display = 'none';
-          post.classList.add('blocked-content');
-        } else {
-          post.style.display = '';
-          post.classList.remove('blocked-content');
-        }
+  // Update edit links
+  updateEditLinks() {
+    const editLinks = document.querySelectorAll('a[href*="/edit/"]');
+    
+    editLinks.forEach(link => {
+      const href = link.getAttribute('href');
+      const postSlug = href.split('/edit/')[1];
+      
+      if (this.isSubmissionActive('edit', postSlug)) {
+        // Grey out edit link
+        link.style.opacity = '0.5';
+        link.style.pointerEvents = 'none';
+        link.style.cursor = 'not-allowed';
+        
+        // Add tooltip or indication
+        link.title = 'Edit submission in progress for this post';
+      } else {
+        // Enable edit link
+        link.style.opacity = '1';
+        link.style.pointerEvents = 'auto';
+        link.style.cursor = 'pointer';
+        link.title = '';
       }
     });
+  }
 
-    // Hide comments from blocked users
-    const comments = document.querySelectorAll('.comment, .comment-item');
-    comments.forEach(comment => {
-      const authorElement = comment.querySelector('.comment-author');
-      if (authorElement) {
-        const username = this.extractUsername(authorElement);
-        if (username && this.isUserBlocked(username)) {
-          comment.style.display = 'none';
-          comment.classList.add('blocked-content');
-        } else {
-          comment.style.display = '';
-          comment.classList.remove('blocked-content');
+  // Show notification
+  showNotification(message) {
+    let notification = document.getElementById('submission-notification');
+    
+    if (!notification) {
+      notification = document.createElement('div');
+      notification.id = 'submission-notification';
+      notification.className = 'fixed top-4 right-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded shadow-lg z-50 max-w-sm';
+      document.body.appendChild(notification);
+    }
+    
+    notification.innerHTML = `
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <p class="text-sm">${message}</p>
+        </div>
+      </div>
+    `;
+    
+    notification.style.display = 'block';
+  }
+
+  // Hide notification
+  hideNotification() {
+    const notification = document.getElementById('submission-notification');
+    if (notification) {
+      notification.style.display = 'none';
+    }
+  }
+
+  // Check workflow status and update submissions
+  async checkWorkflowStatus() {
+    for (const [key, submission] of Object.entries(this.activeSubmissions)) {
+      try {
+        // Check if submission is older than 10 minutes (timeout)
+        if (Date.now() - submission.timestamp > 10 * 60 * 1000) {
+          console.log(`Submission ${key} timed out, removing from tracking`);
+          delete this.activeSubmissions[key];
+          continue;
         }
+
+        // Here you would typically check the GitHub Actions workflow status
+        // For now, we'll implement a simple timeout-based cleanup
+        // In a real implementation, you'd call the GitHub API to check workflow status
+        
+      } catch (error) {
+        console.error(`Error checking workflow status for ${key}:`, error);
       }
-    });
+    }
+    
+    this.saveActiveSubmissions();
+    this.updateUI();
   }
 
-  // Setup event listeners for dynamic content
-  setupEventListeners() {
-    // Observer for dynamically added content
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'childList') {
-          mutation.addedNodes.forEach((node) => {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              // Check if new posts or comments were added
-              if (node.matches('.post-item, .comment, article') || 
-                  node.querySelector('.post-author, .comment-author')) {
-                setTimeout(() => {
-                  this.addBlockButtons();
-                  this.filterBlockedContent();
-                }, 100);
-              }
-            }
-          });
-        }
-      });
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
+  // Setup periodic checking
+  setupPeriodicCheck() {
+    // Check every 30 seconds
+    setInterval(() => {
+      this.checkWorkflowStatus();
+    }, 30000);
   }
 
-  // Get blocked users list (for admin/debugging)
-  getBlockedUsersList() {
-    return [...this.blockedUsers];
-  }
-
-  // Clear all blocked users (for admin/debugging)
-  clearAllBlocks() {
-    this.blockedUsers = [];
-    this.saveBlockedUsers();
-    this.filterBlockedContent();
-    this.updateBlockButtons();
-    console.log('All user blocks have been cleared');
+  // Check and update UI on page load
+  checkAndUpdateUI() {
+    // Clean up old submissions on page load
+    const now = Date.now();
+    let updated = false;
+    
+    for (const [key, submission] of Object.entries(this.activeSubmissions)) {
+      // Remove submissions older than 10 minutes
+      if (now - submission.timestamp > 10 * 60 * 1000) {
+        delete this.activeSubmissions[key];
+        updated = true;
+      }
+    }
+    
+    if (updated) {
+      this.saveActiveSubmissions();
+    }
+    
+    this.updateUI();
   }
 }
 
 // Initialize workflow tracker when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
   window.workflowTracker = new WorkflowTracker();
 });
 
-// Export for potential module usage
+// Export for use in other scripts
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = WorkflowTracker;
 }
