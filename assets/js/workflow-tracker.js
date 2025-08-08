@@ -224,85 +224,83 @@ class WorkflowTracker {
   async retrieveWorkflow(sha, maxRetries = 5, retryDelay = 5000) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`Retrieving workflow for SHA: ${sha} (attempt ${attempt}/${maxRetries})`);
-        
+        console.log(`Retrieving workflow for SHA: ${sha} (attempt ${attempt}/${maxRetries})`)
+
         // Use Firebase function to get workflow information
-        const firebaseUrl = document.querySelector('meta[name="firebase-url"]')?.getAttribute('content') || 'https://asia-south1-isocnet.cloudfunctions.net';
-        const url = `${firebaseUrl}/checkWorkflow?sha=${sha}`;
-        
-        console.log(`Making request to: ${url}`);
-        
+        const url = `https://asia-south1-isocnet-2d37f.cloudfunctions.net/checkWorkflow?sha=${sha}`
+
+        console.log(`Making request to: ${url}`)
+
         const response = await fetch(url, {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Content-Type': 'application/json'
-          }
-        });
+            "Content-Type": "application/json",
+          },
+        })
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error(`HTTP error! status: ${response.status}`)
         }
 
-        const data = await response.json();
-        console.log('Workflow data received:', data);
+        const data = await response.json()
+        console.log("Workflow data received:", data)
 
         if (data.total_count === 0) {
           if (attempt < maxRetries) {
-            console.log(`No workflows found for this SHA, retrying in ${retryDelay/1000} seconds...`);
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
-            continue;
+            console.log(`No workflows found for this SHA, retrying in ${retryDelay / 1000} seconds...`)
+            await new Promise((resolve) => setTimeout(resolve, retryDelay))
+            continue
           } else {
-            console.log('No workflows found for this SHA after all retries');
-            return null;
+            console.log("No workflows found for this SHA after all retries")
+            return null
           }
         }
 
         // Return the first workflow run (most recent)
-        const workflowRun = data.workflow_runs[0];
+        const workflowRun = data.workflow_runs[0]
         return {
           id: workflowRun.id,
           status: workflowRun.status,
           conclusion: workflowRun.conclusion,
           created_at: workflowRun.created_at,
-          updated_at: workflowRun.updated_at
-        };
-
+          updated_at: workflowRun.updated_at,
+        }
       } catch (error) {
-        console.error(`Error retrieving workflow (attempt ${attempt}/${maxRetries}):`, error);
-        
+        console.error(`Error retrieving workflow (attempt ${attempt}/${maxRetries}):`, error)
+
         if (attempt < maxRetries) {
-          console.log(`Retrying in ${retryDelay/1000} seconds...`);
-          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          console.log(`Retrying in ${retryDelay / 1000} seconds...`)
+          await new Promise((resolve) => setTimeout(resolve, retryDelay))
         } else {
-          console.error('Failed to retrieve workflow after all retries');
-          return null;
+          console.error("Failed to retrieve workflow after all retries")
+          return null
         }
       }
     }
   }
   async checkWorkflowStatus(workflowId) {
     try {
-      console.log(`Checking workflow status for ID: ${workflowId}`);
-      
+      console.log(`Checking workflow status for ID: ${workflowId}`)
+
       // Use Firebase function to get workflow status
-      const firebaseUrl = document.querySelector('meta[name="firebase-url"]')?.getAttribute('content') || 'https://asia-south1-isocnet.cloudfunctions.net';
-      const url = `${firebaseUrl}/checkWorkflow?workflowId=${workflowId}`;
-      
-      console.log(`Making request to: ${url}`);
-      
+
+      const url = `https://asia-south1-isocnet-2d37f.cloudfunctions.net/checkWorkflow?workflowId=${workflowId}`
+
+      console.log(`Making request to: ${url}`)
+
       const response = await fetch(url, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+          "Content-Type": "application/json",
+        },
+      })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const result = await response.json();
-      console.log('Workflow status received:', result);
+      const result = await response.json()
+      console.log("Workflow status received:", result)
 
       // Return standardized status object
       return {
@@ -310,9 +308,9 @@ class WorkflowTracker {
         timedOut: result.status === "cancelled" || result.status === "timed_out",
         status: result.status,
         conclusion: result.conclusion,
-      };
+      }
     } catch (error) {
-      console.error("Error checking workflow status:", error);
+      console.error("Error checking workflow status:", error)
 
       // If API call fails, assume workflow might be completed after reasonable time
       // This prevents indefinite blocking if the API is down
@@ -321,7 +319,7 @@ class WorkflowTracker {
         timedOut: true,
         status: "unknown",
         conclusion: "unknown",
-      };
+      }
     }
   }
 
