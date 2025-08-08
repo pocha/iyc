@@ -223,31 +223,35 @@ class WorkflowTracker {
   async retrieveWorkflow(commitSha, maxRetries = 5, retryDelay = 2000) {
     console.log(`Attempting to retrieve workflow for commit: ${commitSha}`)
     
+    // Get GitHub configuration from Jekyll config
+    const githubUser = window.jekyllConfig?.github_user || 'pocha'
+    const githubRepo = 'forum-theme' // Repository name
+    
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        // Get Firebase URL from Jekyll config (if available) or use default
-        const firebaseUrl = window.jekyllConfig?.firebase_url || "https://asia-south1-isocnet-2d37f.cloudfunctions.net"
-        
-        const response = await fetch(`${firebaseUrl}/getWorkflowStatus?commitSha=${commitSha}`, {
+        // Query GitHub API directly for workflow runs
+        const response = await fetch(`https://api.github.com/repos/${githubUser}/${githubRepo}/actions/runs?head_sha=${commitSha}`, {
           method: "GET",
           headers: {
-            "Content-Type": "application/json",
+            "Accept": "application/vnd.github.v3+json",
+            "User-Agent": "forum-theme-app"
           },
         })
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+          throw new Error(`GitHub API error! status: ${response.status}`)
         }
 
         const result = await response.json()
         
-        if (result.workflow_id) {
-          console.log(`Found workflow ${result.workflow_id} for commit ${commitSha}`)
+        if (result.workflow_runs && result.workflow_runs.length > 0) {
+          const workflow = result.workflow_runs[0] // Get the most recent workflow
+          console.log(`Found workflow ${workflow.id} for commit ${commitSha}`)
           return {
-            workflowId: result.workflow_id,
-            workflowStatus: result.workflow_status,
-            workflowUrl: result.workflow_url,
-            workflowCreatedAt: result.workflow_created_at
+            workflowId: workflow.id,
+            workflowStatus: workflow.status,
+            workflowUrl: workflow.html_url,
+            workflowCreatedAt: workflow.created_at
           }
         } else if (attempt < maxRetries) {
           console.log(`Workflow not found for commit ${commitSha}, attempt ${attempt}/${maxRetries}. Retrying in ${retryDelay}ms...`)
@@ -261,33 +265,33 @@ class WorkflowTracker {
       }
     }
     
-    console.log(`Failed to retrieve workflow for commit ${commitSha} after ${maxRetries} attempts`)
-    return null
   }
 
   async checkWorkflowStatus(workflowId) {
     try {
-      // Get Firebase URL from Jekyll config (if available) or use default
-      const firebaseUrl = window.jekyllConfig?.firebase_url || "https://asia-south1-isocnet-2d37f.cloudfunctions.net"
+      // Get GitHub configuration from Jekyll config
+      const githubUser = window.jekyllConfig?.github_user || 'pocha'
+      const githubRepo = 'forum-theme' // Repository name
 
-      // Make API call to check workflow status
-      const response = await fetch(`${firebaseUrl}/checkWorkflowStatus?workflowId=${workflowId}`, {
+      // Query GitHub API directly for workflow status
+      const response = await fetch(`https://api.github.com/repos/${githubUser}/${githubRepo}/actions/runs/${workflowId}`, {
         method: "GET",
         headers: {
-          "Content-Type": "application/json",
+          "Accept": "application/vnd.github.v3+json",
+          "User-Agent": "forum-theme-app"
         },
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`GitHub API error! status: ${response.status}`)
       }
 
       const result = await response.json()
 
       // Return standardized status object
       return {
-        completed: result.status === "completed" || result.status === "success" || result.status === "failure",
-        timedOut: result.status === "timed_out" || result.status === "cancelled",
+        completed: result.status === "completed",
+        timedOut: result.status === "cancelled" || result.status === "timed_out",
         status: result.status,
         conclusion: result.conclusion,
       }
