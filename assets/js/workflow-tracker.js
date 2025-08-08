@@ -275,7 +275,7 @@ class WorkflowTracker {
     try {
       // Get GitHub configuration from Jekyll config
       const githubUser = window.jekyllConfig?.github_user || "pocha"
-      const githubRepo = "forum-theme" // Repository name
+      const githubRepo = window.jekyllConfig?.github_repo || "iyc" // Repository name
 
       // Query GitHub API directly for workflow status
       const response = await fetch(
