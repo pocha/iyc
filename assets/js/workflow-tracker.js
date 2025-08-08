@@ -11,7 +11,7 @@ class WorkflowTracker {
   }
 
   init() {
-    this.checkAndUpdateUI();
+    this.checkAndApplyPageRestrictions();
   }
 
   // Get active submissions from localStorage
@@ -35,7 +35,6 @@ class WorkflowTracker {
       timestamp: Date.now()
     };
     this.saveActiveSubmissions();
-    this.updateUI();
   }
 
   // Public method to add submission entry (alias for trackSubmission)
@@ -48,7 +47,6 @@ class WorkflowTracker {
     const key = `${type}_${identifier}`;
     delete this.activeSubmissions[key];
     this.saveActiveSubmissions();
-    this.updateUI();
   }
 
   // Check if submission is active
@@ -57,80 +55,61 @@ class WorkflowTracker {
     return this.activeSubmissions.hasOwnProperty(key);
   }
 
-  // Update UI based on active submissions
-  updateUI() {
-    this.updateNewPostForm();
-    this.updateEditLinks();
-    this.blockEditPostForm();
-  }
-
-  // Generic function to block/unblock a form
-  blockForm(formElement, submitButton, isBlocked, blockMessage, enabledButtonText, blockedButtonText) {
-    if (!formElement) return;
-
-    if (isBlocked) {
-      // Grey out form
-      formElement.style.opacity = '0.5';
-      formElement.style.pointerEvents = 'none';
-      
-      // Disable submit button
-      if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.textContent = blockedButtonText;
-      }
-
-      // Show notification
-      this.showNotification(blockMessage);
-    } else {
-      // Enable form
-      formElement.style.opacity = '1';
-      formElement.style.pointerEvents = 'auto';
-      
-      // Enable submit button
-      if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.textContent = enabledButtonText;
-      }
-
-      // Hide notification
-      this.hideNotification();
+  // Check current page and apply restrictions based on ongoing workflows
+  async checkAndApplyPageRestrictions() {
+    // First clean up old submissions
+    await this.cleanupOldSubmissions();
+    
+    const currentPath = window.location.pathname;
+    
+    // Check if this is the new post page (submit form)
+    if (currentPath === '/' || currentPath.includes('submit') || currentPath.includes('new')) {
+      this.handleNewPostPage();
+    }
+    
+    // Check if this is an edit page
+    const editMatch = currentPath.match(/\/edit\/(.+)/);
+    if (editMatch) {
+      const postSlug = editMatch[1];
+      this.handleEditPage(postSlug);
+    }
+    
+    // Check if this is a post view page with edit links
+    const postMatch = currentPath.match(/\/([^\/]+)$/);
+    if (postMatch && !currentPath.includes('/edit/')) {
+      this.handlePostViewPage();
     }
   }
 
-  // Update new post form
-  updateNewPostForm() {
-    const postForm = document.getElementById('postForm');
-    const submitButton = document.getElementById('submitBtn');
-    
+  // Handle new post page restrictions
+  handleNewPostPage() {
     const hasActivePostSubmission = this.isSubmissionActive('post', 'new');
-
-    this.blockForm(
-      postForm,
-      submitButton,
-      hasActivePostSubmission,
-      'A new post submission is already in progress. Please wait for it to complete.',
-      'Submit Post',
-      'Submission in Progress...'
-    );
+    
+    if (hasActivePostSubmission) {
+      const postForm = document.getElementById('postForm');
+      const submitButton = document.getElementById('submitBtn');
+      
+      this.blockForm(
+        postForm,
+        submitButton,
+        'A new post submission is already in progress. Please wait for it to complete.',
+        'Submit Post',
+        'Submission in Progress...'
+      );
+    }
   }
 
-  // Block edit post form on edit page
-  blockEditPostForm() {
-    // Check if we're on an edit page
-    const currentPath = window.location.pathname;
-    const editMatch = currentPath.match(/\/edit\/(.+)/);
+  // Handle edit page restrictions
+  handleEditPage(postSlug) {
+    const hasActiveEditSubmission = this.isSubmissionActive('edit', postSlug);
     
-    if (editMatch) {
-      const postSlug = editMatch[1];
+    if (hasActiveEditSubmission) {
       const editForm = document.getElementById('editForm') || document.getElementById('postForm');
       const submitButton = document.getElementById('updateBtn') || document.getElementById('submitBtn');
       
-      const hasActiveEditSubmission = this.isSubmissionActive('edit', postSlug);
-
       this.blockForm(
         editForm,
         submitButton,
-        hasActiveEditSubmission,
         'An edit submission is already in progress for this post. Please wait for it to complete.',
         'Update Post',
         'Edit in Progress...'
@@ -138,8 +117,8 @@ class WorkflowTracker {
     }
   }
 
-  // Update edit links
-  updateEditLinks() {
+  // Handle post view page - grey out edit links if edit is in progress
+  handlePostViewPage() {
     const editLinks = document.querySelectorAll('a[href*="/edit/"]');
     
     editLinks.forEach(link => {
@@ -154,14 +133,26 @@ class WorkflowTracker {
         
         // Add tooltip or indication
         link.title = 'Edit submission in progress for this post';
-      } else {
-        // Enable edit link
-        link.style.opacity = '1';
-        link.style.pointerEvents = 'auto';
-        link.style.cursor = 'pointer';
-        link.title = '';
       }
     });
+  }
+
+  // Generic function to block a form
+  blockForm(formElement, submitButton, blockMessage, enabledButtonText, blockedButtonText) {
+    if (!formElement) return;
+
+    // Grey out form
+    formElement.style.opacity = '0.5';
+    formElement.style.pointerEvents = 'none';
+    
+    // Disable submit button
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = blockedButtonText;
+    }
+
+    // Show notification
+    this.showNotification(blockMessage);
   }
 
   // Show notification
@@ -216,8 +207,8 @@ class WorkflowTracker {
     }
   }
 
-  // Check and update UI on page load
-  async checkAndUpdateUI() {
+  // Clean up old submissions and check workflow status
+  async cleanupOldSubmissions() {
     const now = Date.now();
     let updated = false;
     
@@ -255,8 +246,6 @@ class WorkflowTracker {
     if (updated) {
       this.saveActiveSubmissions();
     }
-    
-    this.updateUI();
   }
 }
 
