@@ -220,58 +220,50 @@ class WorkflowTracker {
 
   // Check workflow status (placeholder for future implementation)
   // Retrieve workflow information for a commit SHA
-  async retrieveWorkflow(commitSha, maxRetries = 5, retryDelay = 5000) {
-    console.log(`Attempting to retrieve workflow for commit: ${commitSha}`)
+    async retrieveWorkflow(sha) {
+        try {
+            console.log(`Retrieving workflow for SHA: ${sha}`);
+            
+            // Use Firebase function to get workflow information
+            const firebaseUrl = document.querySelector('meta[name="firebase-url"]')?.getAttribute('content') || 'https://asia-south1-isocnet.cloudfunctions.net';
+            const url = `${firebaseUrl}/checkWorkflow?sha=${sha}`;
+            
+            console.log(`Making request to: ${url}`);
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
 
-    // Get GitHub configuration from Jekyll config
-    const githubUser = window.jekyllConfig?.github_user || "pocha"
-    const githubRepo = window.jekyllConfig?.github_repo || "iyc" // Repository name
-    const url = `https://api.github.com/repos/${githubUser}/${githubRepo}/actions/runs?head_sha=${commitSha}`
-    console.log(url)
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        // Query GitHub API directly for workflow runs
-        const response = await fetch(url, {
-          method: "GET",
-          headers: {
-            Accept: "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "forum-theme-app/1.0",
-          },
-        })
+            const data = await response.json();
+            console.log('Workflow data received:', data);
 
-        if (!response.ok) {
-          throw new Error(`GitHub API error! status: ${response.status}`)
+            if (data.total_count === 0) {
+                console.log('No workflows found for this SHA');
+                return null;
+            }
+
+            // Return the first workflow run (most recent)
+            const workflowRun = data.workflow_runs[0];
+            return {
+                id: workflowRun.id,
+                status: workflowRun.status,
+                conclusion: workflowRun.conclusion,
+                created_at: workflowRun.created_at,
+                updated_at: workflowRun.updated_at
+            };
+
+        } catch (error) {
+            console.error('Error retrieving workflow:', error);
+            return null;
         }
-
-        const result = await response.json()
-        console.log(result)
-
-        if (result.workflow_runs && result.workflow_runs.length > 0) {
-          const workflow = result.workflow_runs[0] // Get the most recent workflow
-          console.log(`Found workflow ${workflow.id} for commit ${commitSha}`)
-          return {
-            workflowId: workflow.id,
-            workflowStatus: workflow.status,
-            workflowUrl: workflow.html_url,
-            workflowCreatedAt: workflow.created_at,
-          }
-        } else if (attempt < maxRetries) {
-          console.log(
-            `Workflow not found for commit ${commitSha}, attempt ${attempt}/${maxRetries}. Retrying in ${retryDelay}ms...`
-          )
-          await new Promise((resolve) => setTimeout(resolve, retryDelay))
-        }
-      } catch (error) {
-        console.error(`Error retrieving workflow (attempt ${attempt}/${maxRetries}):`, error)
-        if (attempt < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, retryDelay))
-        }
-      }
     }
-  }
-
   async checkWorkflowStatus(workflowId) {
     try {
       // Get GitHub configuration from Jekyll config
