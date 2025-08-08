@@ -234,15 +234,45 @@ class WorkflowTracker {
 
   // Check workflow status (placeholder for future implementation)
   async checkWorkflowStatus(workflowId) {
-    // This would typically make an API call to check if the workflow is still running
-    // For now, return a simple timeout-based check
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({ completed: false, timedOut: false });
-      }, 1000);
-    });
-  }
+    try {
+      // Get Firebase URL from Jekyll config (if available) or use default
+      const firebaseUrl = window.jekyllConfig?.firebase_url || 'https://asia-south1-isocnet-2d37f.cloudfunctions.net';
+      
+      // Make API call to check workflow status
+      const response = await fetch(`${firebaseUrl}/checkWorkflowStatus?workflowId=${workflowId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      // Return standardized status object
+      return {
+        completed: result.status === 'completed' || result.status === 'success' || result.status === 'failure',
+        timedOut: result.status === 'timed_out' || result.status === 'cancelled',
+        status: result.status,
+        conclusion: result.conclusion
+      };
+      
+    } catch (error) {
+      console.error('Error checking workflow status:', error);
+      
+      // If API call fails, assume workflow might be completed after reasonable time
+      // This prevents indefinite blocking if the API is down
+      return {
+        completed: true,
+        timedOut: true,
+        status: 'unknown',
+        conclusion: 'unknown'
+      };
+    }
+  }
   // Clean up old submissions
   async cleanupOldSubmissions() {
     const now = Date.now();
