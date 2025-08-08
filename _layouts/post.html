@@ -241,6 +241,9 @@ layout: default
         .then(response => response.json())
         .then(data => {
           if (data.success) {
+            if(window.workflowTracker && data.workflowId)
+               window.workflowTracker.trackSubmission("delete", postSlug, data.workflowId)
+
             alert('Post deleted successfully!')
             // Redirect to home page
             window.location.href = '{{ site.baseurl }}/'
