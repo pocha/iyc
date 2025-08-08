@@ -219,6 +219,52 @@ class WorkflowTracker {
   }
 
   // Check workflow status (placeholder for future implementation)
+  // Retrieve workflow information for a commit SHA
+  async retrieveWorkflow(commitSha, maxRetries = 5, retryDelay = 2000) {
+    console.log(`Attempting to retrieve workflow for commit: ${commitSha}`)
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Get Firebase URL from Jekyll config (if available) or use default
+        const firebaseUrl = window.jekyllConfig?.firebase_url || "https://asia-south1-isocnet-2d37f.cloudfunctions.net"
+        
+        const response = await fetch(`${firebaseUrl}/getWorkflowStatus?commitSha=${commitSha}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const result = await response.json()
+        
+        if (result.workflow_id) {
+          console.log(`Found workflow ${result.workflow_id} for commit ${commitSha}`)
+          return {
+            workflowId: result.workflow_id,
+            workflowStatus: result.workflow_status,
+            workflowUrl: result.workflow_url,
+            workflowCreatedAt: result.workflow_created_at
+          }
+        } else if (attempt < maxRetries) {
+          console.log(`Workflow not found for commit ${commitSha}, attempt ${attempt}/${maxRetries}. Retrying in ${retryDelay}ms...`)
+          await new Promise(resolve => setTimeout(resolve, retryDelay))
+        }
+      } catch (error) {
+        console.error(`Error retrieving workflow (attempt ${attempt}/${maxRetries}):`, error)
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, retryDelay))
+        }
+      }
+    }
+    
+    console.log(`Failed to retrieve workflow for commit ${commitSha} after ${maxRetries} attempts`)
+    return null
+  }
+
   async checkWorkflowStatus(workflowId) {
     try {
       // Get Firebase URL from Jekyll config (if available) or use default

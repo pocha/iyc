@@ -369,14 +369,21 @@ layout: default
         // Show success message
         successMessage.classList.remove("hidden")
 
-        if (window.workflowTracker && result.workflowId) {
+        if (window.workflowTracker && result.commitSha) {
           const slug = document.getElementById("slug").value
-          if (!slug) {
-            // New post submission
-            window.workflowTracker.trackSubmission("post", "new-post", result.workflowId)
-          } else {
-            window.workflowTracker.trackSubmission("edit", slug, result.workflowId)
-          }
+          const submissionType = slug ? "edit" : "post"
+          const submissionId = slug || "new-post"
+          
+          // Use retrieveWorkflow to get workflow information
+          window.workflowTracker.retrieveWorkflow(result.commitSha).then(workflowInfo => {
+            if (workflowInfo && workflowInfo.workflowId) {
+              window.workflowTracker.trackSubmission(submissionType, submissionId, workflowInfo.workflowId)
+            } else {
+              console.log("Could not retrieve workflow information for tracking")
+            }
+          }).catch(error => {
+            console.error("Error retrieving workflow for tracking:", error)
+          })
         }
       } else {
         throw new Error(`HTTP error! status: ${response.status}`)
