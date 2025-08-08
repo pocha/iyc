@@ -35,6 +35,8 @@ class WorkflowTracker {
     }
     this.saveActiveSubmissions()
     console.log(`Tracking submission: ${key} with workflow ${workflowId}`)
+    // enable page blocking .. ideally this should be with await but there will not be any API call so we should be good
+    this.checkAndApplyPageRestrictions(false)
   }
 
   // Remove a submission from tracking
@@ -47,14 +49,8 @@ class WorkflowTracker {
     }
   }
 
-  // Check if a submission is active
-  isSubmissionActive(type, identifier) {
-    const key = `${type}_${identifier}`
-    return this.activeSubmissions.hasOwnProperty(key)
-  }
-
   // Check current page and apply restrictions based on active submissions
-  async checkAndApplyPageRestrictions() {
+  async checkAndApplyPageRestrictions(cleanupOldSubmissions = true) {
     const currentPath = window.location.pathname
 
     // Iterate through each active submission to see if current URL is affected
@@ -95,7 +91,7 @@ class WorkflowTracker {
     }
 
     // Clean up old submissions at the end
-    await this.cleanupOldSubmissions()
+    if (cleanupOldSubmissions) await this.cleanupOldSubmissions()
   }
 
   // Handle new post page restrictions
@@ -270,8 +266,8 @@ class WorkflowTracker {
     for (const [key, submission] of Object.entries(this.activeSubmissions)) {
       const timeDiff = now - submission.timestamp
 
-      // Remove submissions older than 10 minutes
-      if (timeDiff > 10 * 60 * 1000) {
+      // check submissions > 2 min old
+      if (timeDiff > 2 * 60 * 1000) {
         try {
           const status = await this.checkWorkflowStatus(submission.workflowId)
           if (status.completed || status.timedOut) {
@@ -281,18 +277,21 @@ class WorkflowTracker {
           }
         } catch (error) {
           console.error(`Error checking workflow status for ${key}:`, error)
-          // If error and older than 10 minutes, remove anyway
-          if (timeDiff > 10 * 60 * 1000) {
-            console.log(`Workflow ${submission.workflowId} timed out, removing from tracking`)
-            delete this.activeSubmissions[key]
-            updated = true
-          }
         }
+      }
+
+      // If error and older than 10 minutes, remove anyway
+      if (timeDiff > 10 * 60 * 1000) {
+        console.log(`Workflow ${submission.workflowId} been there for more than 10 min, removing from tracking`)
+        delete this.activeSubmissions[key]
+        updated = true
       }
     }
 
     if (updated) {
       this.saveActiveSubmissions()
+      // refresh the page so that any blocking & notification goes away
+      window.location.reload()
     }
   }
 }
@@ -300,7 +299,8 @@ class WorkflowTracker {
 // Initialize workflow tracker when DOM is loaded
 document.addEventListener("DOMContentLoaded", function () {
   window.workflowTracker = new WorkflowTracker()
-  window.workflowTracker.checkAndApplyPageRestrictions()
+  // window.workflowTracker.checkAndApplyPageRestrictions()
+  // checkAndApplyPageRestriction() already launched from the constructor
 })
 
 // Export for use in other scripts
