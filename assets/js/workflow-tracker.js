@@ -266,28 +266,27 @@ class WorkflowTracker {
     }
   async checkWorkflowStatus(workflowId) {
     try {
-      // Get GitHub configuration from Jekyll config
-      const githubUser = window.jekyllConfig?.github_user || "pocha"
-      const githubRepo = window.jekyllConfig?.github_repo || "iyc" // Repository name
-
-      // Query GitHub API directly for workflow status
-      const response = await fetch(
-        `https://api.github.com/repos/${githubUser}/${githubRepo}/actions/runs/${workflowId}`,
-        {
-          method: "GET",
-          headers: {
-            Accept: "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "forum-theme-app/1.0",
-          },
+      console.log(`Checking workflow status for ID: ${workflowId}`);
+      
+      // Use Firebase function to get workflow status
+      const firebaseUrl = document.querySelector('meta[name="firebase-url"]')?.getAttribute('content') || 'https://asia-south1-isocnet.cloudfunctions.net';
+      const url = `${firebaseUrl}/checkWorkflow?workflowId=${workflowId}`;
+      
+      console.log(`Making request to: ${url}`);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
         }
-      )
+      });
 
       if (!response.ok) {
-        throw new Error(`GitHub API error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const result = await response.json()
+      const result = await response.json();
+      console.log('Workflow status received:', result);
 
       // Return standardized status object
       return {
@@ -295,9 +294,9 @@ class WorkflowTracker {
         timedOut: result.status === "cancelled" || result.status === "timed_out",
         status: result.status,
         conclusion: result.conclusion,
-      }
+      };
     } catch (error) {
-      console.error("Error checking workflow status:", error)
+      console.error("Error checking workflow status:", error);
 
       // If API call fails, assume workflow might be completed after reasonable time
       // This prevents indefinite blocking if the API is down
@@ -306,9 +305,10 @@ class WorkflowTracker {
         timedOut: true,
         status: "unknown",
         conclusion: "unknown",
-      }
+      };
     }
   }
+
   // Clean up old submissions
   async cleanupOldSubmissions() {
     const now = Date.now()
