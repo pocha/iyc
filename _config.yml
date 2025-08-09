@@ -3,6 +3,7 @@ description: 'Community of Ishaites to share information, giveaway items and ask
 baseurl: '/iyc'
 url: ''
 github_user: 'pocha'
+github_repo: 'iyc'
 github_branch: 'master'
 firebase_url: 'https://asia-south1-isocnet-2d37f.cloudfunctions.net'
 

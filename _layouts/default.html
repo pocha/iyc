@@ -78,5 +78,11 @@
         <p>&copy; 2025 {{ site.title }}. Built using <a href="https://nonbios.ai">nonbios.ai</a></p>
       </div>
     </footer>
+    <!-- Workflow Tracker Script -->
+    <script src="{{ site.baseurl }}/assets/js/workflow-tracker.js"></script>
+    <script>
+      window.firebaseUrl = "{{ site.firebase_url }}"
+      window.baseurl = "{{ site.baseurl }}"
+    </script>
   </body>
 </html>

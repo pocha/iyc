@@ -78,8 +78,8 @@ exports.deletePost = functions.region("asia-south1").https.onRequest(async (req,
         success: true,
         message: "Post deleted successfully!",
         data: {
+          ...result,
           postSlug: postSlug,
-          githubUrl: githubUrl,
           deletedAt: new Date().toISOString(),
         },
       })

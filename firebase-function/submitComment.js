@@ -113,9 +113,9 @@ image: ${imageUrl}`
         success: true,
         message: "Comment submitted successfully!",
         data: {
+          ...result,
           postSlug: postSlug,
           comment: comment,
-          githubUrl: result.githubUrl,
           submittedAt: timestamp,
         },
       })

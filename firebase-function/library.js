@@ -311,18 +311,7 @@ ${description}
     })
 
     // Create single commit with all files
-    const result = await createSingleCommit(filesToProcess, `Create new blog post: ${title}`)
-
-    // Extract date components for URL
-    const dateObj = new Date(postDate)
-    return {
-      success: true,
-      postUrl: `http://20.42.15.153:4001/iyc/${dateObj.getFullYear()}/${String(dateObj.getMonth() + 1).padStart(
-        2,
-        "0"
-      )}/${String(dateObj.getDate()).padStart(2, "0")}/${slug}.html`,
-      githubUrl: result.githubUrl,
-    }
+    return await createSingleCommit(filesToProcess, `Create new blog post: ${title}`)
   } catch (error) {
     console.error("Error creating new post:", error)
     throw error
@@ -450,18 +439,7 @@ ${description}
     })
 
     // Create single commit with all updated/new files
-    const result = await createSingleCommit(filesToProcess, `Update blog post: ${title}`)
-
-    // Extract date components for URL
-    const dateObj = new Date(date)
-    return {
-      success: true,
-      postUrl: `http://20.42.15.153:4001/iyc/${dateObj.getFullYear()}/${String(dateObj.getMonth() + 1).padStart(
-        2,
-        "0"
-      )}/${String(dateObj.getDate()).padStart(2, "0")}/${slug}.html`,
-      githubUrl: result.githubUrl,
-    }
+    return await createSingleCommit(filesToProcess, `Update blog post: ${title}`)
   } catch (error) {
     console.error("Error editing post:", error)
     throw error
