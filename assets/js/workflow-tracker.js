@@ -76,10 +76,10 @@ class WorkflowTracker {
         const formattedLastChecked = new Date(lastChecked).toLocaleTimeString()
         message = `<p>${operation} operation status is ${status}. Backend received data at ${formattedTimestamp}. Last check was done at ${formattedLastChecked}.</p>`
         message += `<p>Status usually updates in approx 2 minutes from backend receiving the data. Refresh the page then.</p>`
+        message += `<p>Operation lifecycle - pending, queued, in-progress, completed</p>`
       } else {
         message = `<p>${operation} operation is pending. Refresh the page after a minute. Appropriate functionality will be blocked till this operation completes.</p>`
       }
-      message += `<p>Operation lifecycle - pending, queued, in-progress, completed</p>`
       this.showNotification(message)
     }
 
@@ -226,10 +226,13 @@ class WorkflowTracker {
     let submissionsRemoved = []
 
     for (const [url, submission] of Object.entries(this.activeSubmissions)) {
-      const timeDiff = now - submission.timestamp
+      let timeDiff = now - submission.timestamp
+      if (submission.lastChecked) {
+        timeDiff = now - submission.lastChecked
+      }
 
-      // check submissions > 2 min old
-      if (timeDiff > 2 * 60 * 1000) {
+      // give 30 sec gap so not to check too often
+      if (timeDiff > 0.5 * 60 * 1000) {
         try {
           const workflowStatus = await this.checkWorkflowStatus(submission.commitSha)
           if (["completed", "cancelled", "timed_out"].includes(workflowStatus.status)) {
