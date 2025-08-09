@@ -70,7 +70,9 @@ class WorkflowTracker {
       let message
       if (lastRun) {
         const { status, conclusion, createdAt } = lastRun
-        message = `<p>${operation} operation done is ${status}. Backend received data at ${timestamp}. Last check was done at ${lastChecked}.</p>`
+        const formattedTimestamp = new Date(timestamp).toLocaleTimeString()
+        const formattedLastChecked = new Date(lastChecked).toLocaleTimeString()
+        message = `<p>${operation} operation status is ${status}. Backend received data at ${formattedTimestamp}. Last check was done at ${formattedLastChecked}.</p>`
         message += `<p>Status usually updates in approx 2 minutes from backend receiving the data. Refresh the page then.</p>`
       } else {
         message = `<p>${operation} operation is pending. Refresh the page after a minute. Appropriate functionality will be blocked till this operation completes.</p>`
