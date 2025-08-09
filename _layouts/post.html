@@ -290,7 +290,7 @@ layout: default
             if (data.success) {
               if (window.workflowTracker && data.commitSha) {
                 // Track submission with commitSha directly
-                window.workflowTracker.trackSubmission("delete", postSlug, "delete_post", data.commitSha)
+                window.workflowTracker.trackSubmission(window.location.pathname, postSlug, "delete_post", data.commitSha, Date.now())
               }
 
               alert("Post deleted successfully!")
