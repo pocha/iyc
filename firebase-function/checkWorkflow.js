@@ -33,14 +33,14 @@ const checkWorkflow = functions.region("asia-south1").https.onRequest((req, res)
 
         // Return single workflow run data
         return res.status(200).json({
-          id: response.data.id,
+          /*id: response.data.id, */
           status: response.data.status,
           conclusion: response.data.conclusion,
-          created_at: response.data.created_at,
+          /*created_at: response.data.created_at,
           updated_at: response.data.updated_at,
           head_sha: response.data.head_sha,
-          workflow_id: response.data.workflow_id,
-          name: response.data.name,
+          workflowId: response.data.workflow_id,
+          name: response.data.name,*/
         })
       } else {
         console.log(`Checking workflow for commit SHA: ${sha}`)
@@ -55,19 +55,26 @@ const checkWorkflow = functions.region("asia-south1").https.onRequest((req, res)
 
         console.log(`Found ${response.data.total_count} workflow runs for SHA: ${sha}`)
 
+        if (response.data.total_count == 0) {
+          //workflow is not yet created maybe
+          return res.status(200).json({
+            workflowId: null,
+          })
+        }
+
         // Return the workflow runs data
         return res.status(200).json({
-          total_count: response.data.total_count,
+          /*total_count: response.data.total_count,
           workflow_runs: response.data.workflow_runs.map((run) => ({
             id: run.id,
             status: run.status,
             conclusion: run.conclusion,
             created_at: run.created_at,
             updated_at: run.updated_at,
-            head_sha: run.head_sha,
-            workflow_id: run.workflow_id,
-            name: run.name,
-          })),
+            head_sha: run.head_sha,*/
+          workflowId: response.data.workflow_runs[0].workflow_id,
+          /*name: run.name,
+          })),*/
         })
       }
     } catch (error) {

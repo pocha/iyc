@@ -221,13 +221,13 @@ class WorkflowTracker {
   // Check workflow status (placeholder for future implementation)
   // Retrieve workflow information for a commit SHA
   // Retrieve workflow information for a commit SHA
-  async retrieveWorkflow(sha, maxRetries = 5, retryDelay = 5000) {
+  async retrieveWorkflow(sha, maxRetries = 5, retryDelay = 2000) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         console.log(`Retrieving workflow for SHA: ${sha} (attempt ${attempt}/${maxRetries})`)
 
         // Use Firebase function to get workflow information
-        const url = `https://asia-south1-isocnet-2d37f.cloudfunctions.net/checkWorkflow?sha=${sha}`
+        const url = `${firebaseUrl}/checkWorkflow?sha=${sha}`
 
         console.log(`Making request to: ${url}`)
 
@@ -245,7 +245,7 @@ class WorkflowTracker {
         const data = await response.json()
         console.log("Workflow data received:", data)
 
-        if (data.total_count === 0) {
+        if (!data || !data.workflowId) {
           if (attempt < maxRetries) {
             console.log(`No workflows found for this SHA, retrying in ${retryDelay / 1000} seconds...`)
             await new Promise((resolve) => setTimeout(resolve, retryDelay))
@@ -256,15 +256,7 @@ class WorkflowTracker {
           }
         }
 
-        // Return the first workflow run (most recent)
-        const workflowRun = data.workflow_runs[0]
-        return {
-          id: workflowRun.id,
-          status: workflowRun.status,
-          conclusion: workflowRun.conclusion,
-          created_at: workflowRun.created_at,
-          updated_at: workflowRun.updated_at,
-        }
+        return data
       } catch (error) {
         console.error(`Error retrieving workflow (attempt ${attempt}/${maxRetries}):`, error)
 
@@ -284,7 +276,7 @@ class WorkflowTracker {
 
       // Use Firebase function to get workflow status
 
-      const url = `https://asia-south1-isocnet-2d37f.cloudfunctions.net/checkWorkflow?workflowId=${workflowId}`
+      const url = `${firebaseUrl}/checkWorkflow?workflowId=${workflowId}`
 
       console.log(`Making request to: ${url}`)
 
@@ -353,11 +345,10 @@ class WorkflowTracker {
       }
     }
 
-    if (updated) {
-      this.saveActiveSubmissions()
-      // refresh the page so that any blocking & notification goes away
-      window.location.reload()
-    }
+    if (updated) this.saveActiveSubmissions()
+
+    // refresh the page so that any blocking & notification goes away
+    if (this.activeSubmissions.keys().length == 0) window.location.reload()
   }
 }
 
