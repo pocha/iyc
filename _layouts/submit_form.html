@@ -376,22 +376,13 @@ layout: default
           const submissionId = slug || null
           const operation = slug ? "edit_post" : "new_post"
 
-          // Use retrieveWorkflow to get workflow information
-          window.workflowTracker
-            .retrieveWorkflow(result.commitSha)
-            .then((workflowInfo) => {
-              if (workflowInfo && workflowInfo.workflowId) {
-                window.workflowTracker.trackSubmission(
-                  url,
-                  submissionId,
-                  operation,
-                  workflowInfo.workflowId,
-                  workflowInfo.createdAt
-                )
-              } else {
-                console.log("Could not retrieve workflow information for tracking")
-              }
-            })
+          // Track submission with commitSha directly
+          window.workflowTracker.trackSubmission(
+            url,
+            submissionId,
+            operation,
+            result.commitSha
+          )
             .catch((error) => {
               console.error("Error retrieving workflow for tracking:", error)
             })

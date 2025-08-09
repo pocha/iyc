@@ -237,17 +237,13 @@ layout: default
         .then(data => {
           if (data.success) {
             if(window.workflowTracker && data.commitSha) {
-              // Use retrieveWorkflow to get workflow information
-              window.workflowTracker.retrieveWorkflow(data.commitSha).then(workflowInfo => {
-                if (workflowInfo && workflowInfo.workflowId) {
-                  window.workflowTracker.trackSubmission("delete", postSlug, workflowInfo.workflowId)
-                } else {
-                  console.log("Could not retrieve workflow information for tracking")
-                }
-              }).catch(error => {
-                console.error("Error retrieving workflow for tracking:", error)
-              })
-            }
+              // Track submission with commitSha directly
+              window.workflowTracker.trackSubmission(
+                "delete", 
+                postSlug, 
+                "delete_post", 
+                data.commitSha
+              )
 
             alert('Post deleted successfully!')
             // Redirect to home page

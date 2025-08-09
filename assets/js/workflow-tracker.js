@@ -25,15 +25,15 @@ class WorkflowTracker {
   }
 
   // Track a new submission
-  trackSubmission(url, submissionId, workflowId, operation, createdAt) {
+  trackSubmission(url, submissionId, commitSha, operation, createdAt) {
     this.activeSubmissions[url] = {
       submissionId: submissionId,
       operation: operation,
-      workflowId: workflowId,
+      commitSha: commitSha,
       timestamp: createdAt,
     }
     this.saveActiveSubmissions()
-    console.log(`Tracking submission: ${url} with workflow ${workflowId}`)
+    console.log(`Tracking submission: ${url} with commit SHA ${commitSha}`)
     // enable page blocking .. ideally this should be with await but there will not be any API call so we should be good
     this.checkAndApplyPageRestrictions(false)
   }
@@ -177,62 +177,13 @@ class WorkflowTracker {
   // Check workflow status (placeholder for future implementation)
   // Retrieve workflow information for a commit SHA
   // Retrieve workflow information for a commit SHA
-  async retrieveWorkflow(sha, maxRetries = 5, retryDelay = 2000) {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(`Retrieving workflow for SHA: ${sha} (attempt ${attempt}/${maxRetries})`)
-
-        // Use Firebase function to get workflow information
-        const url = `${window.firebaseUrl}/checkWorkflow?sha=${sha}`
-
-        console.log(`Making request to: ${url}`)
-
-        const response = await fetch(url, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        })
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-
-        const data = await response.json()
-        console.log("Workflow data received:", data)
-
-        if (!data || !data.workflowId) {
-          if (attempt < maxRetries) {
-            console.log(`No workflows found for this SHA, retrying in ${retryDelay / 1000} seconds...`)
-            await new Promise((resolve) => setTimeout(resolve, retryDelay))
-            continue
-          } else {
-            console.log("No workflows found for this SHA after all retries")
-            return null
-          }
-        }
-
-        return data
-      } catch (error) {
-        console.error(`Error retrieving workflow (attempt ${attempt}/${maxRetries}):`, error)
-
-        if (attempt < maxRetries) {
-          console.log(`Retrying in ${retryDelay / 1000} seconds...`)
-          await new Promise((resolve) => setTimeout(resolve, retryDelay))
-        } else {
-          console.error("Failed to retrieve workflow after all retries")
-          return null
-        }
-      }
-    }
-  }
-  async checkWorkflowStatus(workflowId) {
+  async checkWorkflowStatus(commitSha) {
     try {
-      console.log(`Checking workflow status for ID: ${workflowId}`)
+      console.log(`Checking workflow status for commit SHA: ${commitSha}`)
 
       // Use Firebase function to get workflow status
 
-      const url = `${window.firebaseUrl}/checkWorkflow?workflowId=${workflowId}`
+      const url = `${window.firebaseUrl}/checkWorkflow?sha=${commitSha}`
 
       console.log(`Making request to: ${url}`)
 
@@ -284,9 +235,9 @@ class WorkflowTracker {
       // check submissions > 2 min old
       if (timeDiff > 2 * 60 * 1000) {
         try {
-          const status = await this.checkWorkflowStatus(submission.workflowId)
+          const status = await this.checkWorkflowStatus(submission.commitSha)
           if (status.completed || status.timedOut) {
-            console.log(`Workflow ${submission.workflowId} completed/timed out, removing from tracking`)
+            console.log(`Workflow for commit ${submission.commitSha} completed/timed out, removing from tracking`)
 
             const clonedObject = JSON.parse(JSON.stringify(this.activeSubmissions[key]))
             submissionsRemoved.push(clonedObject)
