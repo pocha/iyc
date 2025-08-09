@@ -64,15 +64,19 @@ class WorkflowTracker {
       }
     }
 
-    if (
-      this.activeSubmissions &&
-      Object.keys(this.activeSubmissions).length > 0 &&
-      window.location.pathname === window.baseurl
-    ) {
-      // show notification on the home page
-      this.showNotification(
-        "Your post submission / editing / deletion in progress .. check back approx 2 min after the submission to see the updated content"
-      )
+    if (this.activeSubmissions && Object.entries(this.activeSubmissions).length > 0) {
+      const [url, submission] = Object.entries(this.activeSubmissions)[0] // getting the oldest entry
+      const { lastRun, timestamp, operation, submissionId, lastChecked } = submission
+      let message
+      if (lastRun) {
+        const { status, conclusion, createdAt } = lastRun
+        message = `<p>${operation} operation done is ${status}. Backend received data at ${timestamp}. Last check was done at ${lastChecked}.</p>`
+        message += `<p>Status usually updates in approx 2 minutes from backend receiving the data. Refresh the page then.</p>`
+      } else {
+        message = `<p>${operation} operation is pending. Refresh the page after a minute. Appropriate functionality will be blocked till this operation completes.</p>`
+      }
+      message += `<p>Operation lifecycle - pending, queued, in-progress, completed</p>`
+      this.showNotification(message)
     }
 
     // Clean up old submissions at the end
@@ -111,10 +115,6 @@ class WorkflowTracker {
 
   // Handle post view page - grey out edit/delete links based on active operations
   handlePostViewPage(postSlug, operationType) {
-    this.showNotification(
-      operationType === "edit" ? "Edit ongoing for this post" : "This post is scheduled for deletion"
-    )
-
     const buttons = []
     buttons.push(document.getElementById("editPostBtn"))
     buttons.push(document.getElementById("deletePostBtn"))
@@ -138,8 +138,6 @@ class WorkflowTracker {
       submitButton.textContent = progressText
       submitButton.style.cursor = "not-allowed"
     }
-
-    this.showNotification(message)
   }
 
   // Show notification to user
@@ -202,22 +200,16 @@ class WorkflowTracker {
       console.log("Workflow status received:", result)
 
       // Return standardized status object
-      return {
-        completed: result.status === "completed",
-        timedOut: result.status === "cancelled" || result.status === "timed_out",
-        status: result.status,
-        conclusion: result.conclusion,
-      }
+      return result
     } catch (error) {
       console.error("Error checking workflow status:", error)
 
       // If API call fails, assume workflow might be completed after reasonable time
       // This prevents indefinite blocking if the API is down
       return {
-        completed: true,
-        timedOut: true,
-        status: "unknown",
-        conclusion: "unknown",
+        status: "error",
+        conclusion: String.toString(error),
+        createdAt: null,
       }
     }
   }
@@ -229,31 +221,35 @@ class WorkflowTracker {
 
     let submissionsRemoved = []
 
-    for (const [key, submission] of Object.entries(this.activeSubmissions)) {
+    for (const [url, submission] of Object.entries(this.activeSubmissions)) {
       const timeDiff = now - submission.timestamp
 
       // check submissions > 2 min old
       if (timeDiff > 2 * 60 * 1000) {
         try {
-          const status = await this.checkWorkflowStatus(submission.commitSha)
-          if (status.completed || status.timedOut) {
+          const workflowStatus = await this.checkWorkflowStatus(submission.commitSha)
+          if (["completed", "cancelled", "timed_out"].includes(workflowStatus.status)) {
             console.log(`Workflow for commit ${submission.commitSha} completed/timed out, removing from tracking`)
 
-            const clonedObject = JSON.parse(JSON.stringify(this.activeSubmissions[key]))
+            const clonedObject = JSON.parse(JSON.stringify(this.activeSubmissions[url]))
             submissionsRemoved.push(clonedObject)
 
-            delete this.activeSubmissions[key]
-            updated = true
+            delete this.activeSubmissions[url]
+          } else {
+            const submission = this.activeSubmissions[url]
+            submission.lastRun = workflowStatus
+            submission.lastChecked = Date.now()
           }
+          updated = true
         } catch (error) {
-          console.error(`Error checking workflow status for ${key}:`, error)
+          console.error(`Error checking workflow status for ${url}:`, error)
         }
       }
 
       // If error and older than 10 minutes, remove anyway
       if (timeDiff > 10 * 60 * 1000) {
         console.log(`Workflow ${submission.workflowId} been there for more than 10 min, removing from tracking`)
-        delete this.activeSubmissions[key]
+        delete this.activeSubmissions[url]
         updated = true
       }
     }
