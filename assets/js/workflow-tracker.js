@@ -167,7 +167,7 @@ class WorkflowTracker {
       font-size: 14px;
       border-left: 4px solid #fdcb6e;
     `
-    notification.textContent = message
+    notification.innerHTML = message
 
     document.body.appendChild(notification)
 
