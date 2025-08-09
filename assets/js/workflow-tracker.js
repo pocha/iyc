@@ -66,7 +66,7 @@ class WorkflowTracker {
 
     if (
       this.activeSubmissions &&
-      this.activeSubmissions.keys().length > 0 &&
+      Object.keys(this.activeSubmissions).length > 0 &&
       window.location.pathname === window.baseurl
     ) {
       // show notification on the home page
