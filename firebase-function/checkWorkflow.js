@@ -13,70 +13,40 @@ const checkWorkflow = functions.region("asia-south1").https.onRequest((req, res)
         return res.status(405).json({ error: "Method not allowed" })
       }
 
-      const { sha, workflowId } = req.query
+      const { sha } = req.query
 
-      if (!sha && !workflowId) {
-        return res.status(400).json({ error: "Missing required parameter: sha or workflowId" })
+      if (!sha) {
+        return res.status(400).json({ error: "Missing required parameter: sha" })
       }
 
-      if (workflowId) {
-        console.log(`Checking specific workflow run: ${workflowId}`)
+      console.log(`Checking workflow for commit SHA: ${sha}`)
 
-        // Query GitHub API for a specific workflow run
-        const response = await octokit.rest.actions.getWorkflowRun({
-          owner: GITHUB_OWNER,
-          repo: GITHUB_REPO,
-          run_id: workflowId,
-        })
+      // Query GitHub API for workflow runs with the specific commit SHA
+      const response = await octokit.rest.actions.listWorkflowRunsForRepo({
+        owner: GITHUB_OWNER,
+        repo: GITHUB_REPO,
+        head_sha: sha,
+        per_page: 10,
+      })
 
-        console.log(`Found workflow run ${workflowId} with status: ${response.data.status}`)
+      console.log(`Found ${response.data.total_count} workflow runs for SHA: ${sha}`)
 
-        // Return single workflow run data
+      if (response.data.total_count == 0) {
+        // Workflow is not yet created
         return res.status(200).json({
-          /*id: response.data.id, */
-          status: response.data.status,
-          conclusion: response.data.conclusion,
-          createdAt: response.data.created_at,
-          /*updated_at: response.data.updated_at,
-          head_sha: response.data.head_sha,
-          workflowId: response.data.workflow_id,
-          name: response.data.name,*/
-        })
-      } else {
-        console.log(`Checking workflow for commit SHA: ${sha}`)
-
-        // Query GitHub API for workflow runs with the specific commit SHA
-        const response = await octokit.rest.actions.listWorkflowRunsForRepo({
-          owner: GITHUB_OWNER,
-          repo: GITHUB_REPO,
-          head_sha: sha,
-          per_page: 10,
-        })
-
-        console.log(`Found ${response.data.total_count} workflow runs for SHA: ${sha}`)
-
-        if (response.data.total_count == 0) {
-          //workflow is not yet created maybe
-          return res.status(200).json({
-            workflowId: null,
-          })
-        }
-
-        // Return the workflow runs data
-        return res.status(200).json({
-          /*total_count: response.data.total_count,
-          workflow_runs: response.data.workflow_runs.map((run) => ({
-            id: run.id,
-            status: run.status,
-            conclusion: run.conclusion,
-            created_at: run.created_at,
-            updated_at: run.updated_at,
-            head_sha: run.head_sha,*/
-          workflowId: response.data.workflow_runs[0].workflow_id,
-          /*name: run.name,
-          })),*/
+          status: "pending",
+          conclusion: null,
+          createdAt: null,
         })
       }
+
+      // Return the most recent workflow run data
+      const latestRun = response.data.workflow_runs[0]
+      return res.status(200).json({
+        status: latestRun.status,
+        conclusion: latestRun.conclusion,
+        createdAt: latestRun.created_at,
+      })
     } catch (error) {
       console.error("Error checking workflow:", error)
       return res.status(500).json({
