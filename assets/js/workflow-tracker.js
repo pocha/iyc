@@ -276,6 +276,8 @@ class WorkflowTracker {
     const now = Date.now()
     let updated = false
 
+    let submissionsRemoved = []
+
     for (const [key, submission] of Object.entries(this.activeSubmissions)) {
       const timeDiff = now - submission.timestamp
 
@@ -285,6 +287,10 @@ class WorkflowTracker {
           const status = await this.checkWorkflowStatus(submission.workflowId)
           if (status.completed || status.timedOut) {
             console.log(`Workflow ${submission.workflowId} completed/timed out, removing from tracking`)
+
+            const clonedObject = JSON.parse(JSON.stringify(this.activeSubmissions[key]))
+            submissionsRemoved.push(clonedObject)
+
             delete this.activeSubmissions[key]
             updated = true
           }
@@ -302,6 +308,41 @@ class WorkflowTracker {
     }
 
     if (updated) this.saveActiveSubmissions()
+
+    submissionsRemoved.forEach((submission) => {
+      let message = "Operation is now complete, refresh the page to view updated content"
+      if (submission.operation === "new_post") {
+        message = "New post operation is now complete, refresh the page to view updated content"
+      } else if (submission.operation === "edit_post") {
+        message = "Edit post operation is now complete, refresh the page to view updated content"
+      } else if (submission.operation === "delete_post") {
+        message = "Delete post operation is now complete, refresh the page to view updated content"
+      }
+      this.showCompletionNotification(message)
+    })
+  }
+
+  // TODO - there should be a container to which multiple notification should be stacked on the top
+  showCompletionNotification(message) {
+    const notification = document.createElement("div")
+    notification.className = "completion-notification"
+    notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #3498db;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    max-width: 300px;
+    font-size: 14px;
+    line-height: 1.4;
+  `
+    notification.textContent = message
+
+    document.body.appendChild(notification)
   }
 }
 
