@@ -282,6 +282,11 @@ class WorkflowTracker {
 
   // TODO - there should be a container to which multiple notification should be stacked on the top
   showCompletionNotification(message) {
+    const existing = document.getElementById("workflow-notification")
+    if (existing) {
+      existing.remove()
+    }
+
     const notification = document.createElement("div")
     notification.className = "completion-notification"
     notification.style.cssText = `
