@@ -248,7 +248,7 @@ class WorkflowTracker {
 
       // If error and older than 10 minutes, remove anyway
       if (timeDiff > 10 * 60 * 1000) {
-        console.log(`Workflow ${submission.workflowId} been there for more than 10 min, removing from tracking`)
+        console.log(`Workflow ${submission.commitSha} been there for more than 10 min, removing from tracking`)
         delete this.activeSubmissions[url]
         updated = true
       }
