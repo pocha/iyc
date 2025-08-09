@@ -25,7 +25,7 @@ class WorkflowTracker {
   }
 
   // Track a new submission
-  trackSubmission(url, submissionId, commitSha, operation, createdAt) {
+  trackSubmission(url, submissionId, operation, commitSha, createdAt) {
     this.activeSubmissions[url] = {
       submissionId: submissionId,
       operation: operation,
@@ -40,6 +40,8 @@ class WorkflowTracker {
 
   // Check current page and apply restrictions based on active submissions
   async checkAndApplyPageRestrictions(cleanupOldSubmissions = true) {
+    if (!this.activeSubmissions || this.activeSubmissions == {}) return
+
     const currentUrl = window.location.href
 
     // Iterate through each active submission to see if current URL is affected
