@@ -36,8 +36,8 @@ const checkWorkflow = functions.region("asia-south1").https.onRequest((req, res)
           /*id: response.data.id, */
           status: response.data.status,
           conclusion: response.data.conclusion,
-          /*created_at: response.data.created_at,
-          updated_at: response.data.updated_at,
+          createdAt: response.data.created_at,
+          /*updated_at: response.data.updated_at,
           head_sha: response.data.head_sha,
           workflowId: response.data.workflow_id,
           name: response.data.name,*/

@@ -25,13 +25,12 @@ class WorkflowTracker {
   }
 
   // Track a new submission
-  trackSubmission(type, identifier, workflowId) {
-    const key = `${type}_${identifier}`
-    this.activeSubmissions[key] = {
-      type: type,
-      identifier: identifier,
+  trackSubmission(url, submissionId, workflowId, operation, createdAt) {
+    this.activeSubmissions[url] = {
+      submissionId: submissionId,
+      operation: operation,
       workflowId: workflowId,
-      timestamp: Date.now(),
+      timestamp: createdAt,
     }
     this.saveActiveSubmissions()
     console.log(`Tracking submission: ${key} with workflow ${workflowId}`)
@@ -39,55 +38,41 @@ class WorkflowTracker {
     this.checkAndApplyPageRestrictions(false)
   }
 
-  // Remove a submission from tracking
-  removeSubmission(type, identifier) {
-    const key = `${type}_${identifier}`
-    if (this.activeSubmissions[key]) {
-      delete this.activeSubmissions[key]
-      this.saveActiveSubmissions()
-      console.log(`Removed submission tracking: ${key}`)
-    }
-  }
-
   // Check current page and apply restrictions based on active submissions
   async checkAndApplyPageRestrictions(cleanupOldSubmissions = true) {
-    const currentPath = window.location.pathname
+    const currentUrl = window.location.href
 
     // Iterate through each active submission to see if current URL is affected
-    for (const [key, submission] of Object.entries(this.activeSubmissions)) {
-      const { type, identifier } = submission
+    for (const [url, submission] of Object.entries(this.activeSubmissions)) {
+      const { submissionId: slug, operation } = submission
 
-      // Check if current page matches any active submission
-      if (type === "post" && identifier === "new") {
-        // Check if this is the new post page
-        if (currentPath === "/" || currentPath.includes("submit") || currentPath.includes("new")) {
-          this.handleNewPostPage()
-        }
-      } else if (type === "edit") {
-        // Check if this is the edit page for this specific post
-        const editMatch = currentPath.match(/\/edit\/(.+)/)
-        if (editMatch && editMatch[1] === identifier) {
-          this.handleEditPage(identifier)
-        }
+      const urlParams = new URLSearchParams(window.location.search)
+      const isEditPage = urlParams.get("edit") === null ? false : true
 
-        // Also check if this is the post view page with edit links
-        const postMatch = currentPath.match(/\/([^\/]+)$/)
-        if (postMatch && postMatch[1] === identifier && !currentPath.includes("/edit/")) {
-          this.handlePostViewPage(identifier, "edit")
-        }
-      } else if (type === "delete") {
-        // Check if this is the post view page for the post being deleted
-        const postMatch = currentPath.match(/\/([^\/]+)$/)
-        if (postMatch && postMatch[1] === identifier && !currentPath.includes("/edit/")) {
-          this.handlePostViewPage(identifier, "delete")
-        }
-
-        // Also check if this is the edit page for the post being deleted
-        const editMatch = currentPath.match(/\/edit\/(.+)/)
-        if (editMatch && editMatch[1] === identifier) {
-          this.handleEditPage(identifier, "delete")
+      if (currentUrl === url) {
+        if (operation === "new_post") this.handleNewPostPage()
+        if (operation === "edit_post") this.handleEditPage("edit")
+        if (operation === "delete_post") this.handlePostViewPage(slug, "delete")
+      } else if (currentUrl.includes(slug)) {
+        if (isEditPage) {
+          // on edit page of a post getting deleted
+          this.handleEditPage("delete")
+        } else {
+          // on post view page of post getting edited
+          this.handlePostViewPage(slug, "edit")
         }
       }
+    }
+
+    if (
+      this.activeSubmissions &&
+      this.activeSubmissions.keys().length > 0 &&
+      window.location.pathname === window.baseurl
+    ) {
+      // show notification on the home page
+      this.showNotification(
+        "Your post submission / editing / deletion in progress .. check back approx 2 min after the submission to see the updated content"
+      )
     }
 
     // Clean up old submissions at the end
@@ -96,7 +81,7 @@ class WorkflowTracker {
 
   // Handle new post page restrictions
   handleNewPostPage() {
-    const postForm = document.getElementById("postForm")
+    const postForm = document.getElementById("submissionForm")
     const submitButton = document.getElementById("submitBtn")
 
     this.blockForm(
@@ -109,9 +94,9 @@ class WorkflowTracker {
   }
 
   // Handle edit page restrictions
-  handleEditPage(postSlug, conflictType = "edit") {
-    const editForm = document.getElementById("editForm") || document.getElementById("postForm")
-    const submitButton = document.getElementById("updateBtn") || document.getElementById("submitBtn")
+  handleEditPage(conflictType = "edit") {
+    const editForm = document.getElementById("submitBtn")
+    const submitButton = document.getElementById("submitBtn")
 
     let message = "An edit submission is already in progress for this post. Please wait for it to complete."
     let progressText = "Edit in Progress..."
@@ -126,48 +111,19 @@ class WorkflowTracker {
 
   // Handle post view page - grey out edit/delete links based on active operations
   handlePostViewPage(postSlug, operationType) {
-    if (operationType === "edit") {
-      // Grey out edit links when edit is in progress
-      const editLinks = document.querySelectorAll(`a[href*="/edit/${postSlug}"]`)
+    this.showNotification(
+      operationType === "edit" ? "Edit ongoing for this post" : "This post is scheduled for deletion"
+    )
 
-      editLinks.forEach((link) => {
-        link.style.opacity = "0.5"
-        link.style.pointerEvents = "none"
-        link.style.cursor = "not-allowed"
-        link.title = "Edit is currently in progress for this post"
-      })
+    const buttons = []
+    buttons.push(document.getElementById("editPostBtn"))
+    buttons.push(document.getElementById("deletePostBtn"))
 
-      this.showNotification("An edit is currently in progress for this post.")
-    } else if (operationType === "delete") {
-      // Grey out both edit and delete buttons when delete is in progress
-      const editLinks = document.querySelectorAll(`a[href*="/edit/${postSlug}"]`)
-      const deleteButtons = document.querySelectorAll(
-        `button[onclick*="deletePost"], button[data-post-slug="${postSlug}"]`
-      )
-
-      // Disable edit links
-      editLinks.forEach((link) => {
-        link.style.opacity = "0.5"
-        link.style.pointerEvents = "none"
-        link.style.cursor = "not-allowed"
-        link.title = "This post is currently being deleted"
-      })
-
-      // Disable delete buttons
-      deleteButtons.forEach((button) => {
-        button.disabled = true
-        button.style.opacity = "0.5"
-        button.style.cursor = "not-allowed"
-        button.title = "Delete is currently in progress"
-
-        // Update button text if it contains "Delete"
-        if (button.textContent.toLowerCase().includes("delete")) {
-          button.textContent = "Deleting..."
-        }
-      })
-
-      this.showNotification("This post is currently being deleted.")
-    }
+    buttons.forEach((link) => {
+      link.style.opacity = "0.5"
+      link.style.pointerEvents = "none"
+      link.style.cursor = "not-allowed"
+    })
   }
 
   // Block form elements
@@ -227,7 +183,7 @@ class WorkflowTracker {
         console.log(`Retrieving workflow for SHA: ${sha} (attempt ${attempt}/${maxRetries})`)
 
         // Use Firebase function to get workflow information
-        const url = `${firebaseUrl}/checkWorkflow?sha=${sha}`
+        const url = `${window.firebaseUrl}/checkWorkflow?sha=${sha}`
 
         console.log(`Making request to: ${url}`)
 
@@ -276,7 +232,7 @@ class WorkflowTracker {
 
       // Use Firebase function to get workflow status
 
-      const url = `${firebaseUrl}/checkWorkflow?workflowId=${workflowId}`
+      const url = `${window.firebaseUrl}/checkWorkflow?workflowId=${workflowId}`
 
       console.log(`Making request to: ${url}`)
 
@@ -346,9 +302,6 @@ class WorkflowTracker {
     }
 
     if (updated) this.saveActiveSubmissions()
-
-    // refresh the page so that any blocking & notification goes away
-    if (this.activeSubmissions.keys().length == 0) window.location.reload()
   }
 }
 

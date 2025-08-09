@@ -122,6 +122,7 @@ layout: default
   let attachedFiles = []
   let existingImages = []
   let deletedFiles = []
+  let fullPostSlug = ""
 
   // Click to upload
   fileUploadArea.addEventListener("click", () => {
@@ -147,7 +148,7 @@ layout: default
       document.getElementById("slug").value = slug
       document.getElementById("date").value = postDate
       // Construct the full slug in format YYYY-MM-DD-slug for loading
-      const fullPostSlug = `${postDate}-${slug}`
+      fullPostSlug = `${postDate}-${slug}`
 
       // Load existing post data
       loadPostForEdit(fullPostSlug)
@@ -371,19 +372,29 @@ layout: default
 
         if (window.workflowTracker && result.commitSha) {
           const slug = document.getElementById("slug").value
-          const submissionType = slug ? "edit" : "post"
-          const submissionId = slug || "new-post"
-          
+          const url = window.location.href
+          const submissionId = slug || null
+          const operation = slug ? "edit_post" : "new_post"
+
           // Use retrieveWorkflow to get workflow information
-          window.workflowTracker.retrieveWorkflow(result.commitSha).then(workflowInfo => {
-            if (workflowInfo && workflowInfo.workflowId) {
-              window.workflowTracker.trackSubmission(submissionType, submissionId, workflowInfo.workflowId)
-            } else {
-              console.log("Could not retrieve workflow information for tracking")
-            }
-          }).catch(error => {
-            console.error("Error retrieving workflow for tracking:", error)
-          })
+          window.workflowTracker
+            .retrieveWorkflow(result.commitSha)
+            .then((workflowInfo) => {
+              if (workflowInfo && workflowInfo.workflowId) {
+                window.workflowTracker.trackSubmission(
+                  url,
+                  submissionId,
+                  operation,
+                  workflowInfo.workflowId,
+                  workflowInfo.createdAt
+                )
+              } else {
+                console.log("Could not retrieve workflow information for tracking")
+              }
+            })
+            .catch((error) => {
+              console.error("Error retrieving workflow for tracking:", error)
+            })
         }
       } else {
         throw new Error(`HTTP error! status: ${response.status}`)

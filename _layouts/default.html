@@ -81,7 +81,8 @@
     <!-- Workflow Tracker Script -->
     <script src="{{ site.baseurl }}/assets/js/workflow-tracker.js"></script>
     <script>
-      const firebaseUrl = "{{ site.firebase_url }}"
+      window.firebaseUrl = "{{ site.firebase_url }}"
+      window.baseurl = "{{ site.baseurl }}"
     </script>
   </body>
 </html>
