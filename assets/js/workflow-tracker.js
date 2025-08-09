@@ -158,14 +158,16 @@ class WorkflowTracker {
     notification.style.cssText = `
       position: fixed;
       top: 20px;
-      right: 20px;
+      left: 50%;
+      transform: translateX(-50%);
       background-color: #ffeaa7;
       color: #2d3436;
       padding: 15px 20px;
       border-radius: 5px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       z-index: 1000;
-      max-width: 300px;
+      max-width: 600px;
+      min-width: 400px;
       font-size: 14px;
       border-left: 4px solid #fdcb6e;
     `
@@ -283,14 +285,16 @@ class WorkflowTracker {
     notification.style.cssText = `
     position: fixed;
     top: 20px;
-    right: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     background-color: #3498db;
     color: white;
     padding: 15px 20px;
     border-radius: 5px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     z-index: 1000;
-    max-width: 300px;
+    max-width: 600px;
+    min-width: 400px;
     font-size: 14px;
     line-height: 1.4;
   `
