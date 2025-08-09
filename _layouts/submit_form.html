@@ -377,11 +377,7 @@ layout: default
           const operation = slug ? "edit_post" : "new_post"
 
           // Track submission with commitSha directly
-          window.workflowTracker
-            .trackSubmission(url, submissionId, operation, result.commitSha, Date.now())
-            .catch((error) => {
-              console.error("Error retrieving workflow for tracking:", error)
-            })
+          window.workflowTracker.trackSubmission(url, submissionId, operation, result.commitSha, Date.now())
         }
       } else {
         throw new Error(`HTTP error! status: ${response.status}`)
