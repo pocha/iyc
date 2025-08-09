@@ -33,7 +33,7 @@ class WorkflowTracker {
       timestamp: createdAt,
     }
     this.saveActiveSubmissions()
-    console.log(`Tracking submission: ${key} with workflow ${workflowId}`)
+    console.log(`Tracking submission: ${url} with workflow ${workflowId}`)
     // enable page blocking .. ideally this should be with await but there will not be any API call so we should be good
     this.checkAndApplyPageRestrictions(false)
   }
