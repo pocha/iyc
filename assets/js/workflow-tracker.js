@@ -74,11 +74,13 @@ class WorkflowTracker {
         const { status, conclusion, createdAt } = lastRun
         const formattedTimestamp = new Date(timestamp).toLocaleTimeString()
         const formattedLastChecked = new Date(lastChecked).toLocaleTimeString()
-        message = `<p>${operation} operation status is ${status}. Backend received data at ${formattedTimestamp}. Last check was done at ${formattedLastChecked}.</p>`
+        message = `<p>${operation} operation status is ${status}.</p>`
+        message += `<p>Backend received data at ${formattedTimestamp}. Last check was done at ${formattedLastChecked}.</p>`
         message += `<p>Status usually updates in approx 2 minutes from backend receiving the data. Refresh the page then.</p>`
         message += `<p>Operation lifecycle - pending, queued, in-progress, completed</p>`
       } else {
-        message = `<p>${operation} operation is pending. Refresh the page after a minute. Appropriate functionality will be blocked till this operation completes.</p>`
+        message = `<p>${operation} operation is pending. Refresh the page after 30 seconds to see an update.</p>`
+        message += `<p>Appropriate functionality will be blocked till this operation completes.</p>`
       }
       this.showNotification(message)
     }
@@ -166,9 +168,9 @@ class WorkflowTracker {
       border-radius: 5px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       z-index: 1000;
-      max-width: 600px;
-      min-width: 400px;
-      font-size: 14px;
+      max-width: 800px;
+      min-width: 600px;
+      font-size: 12px;
       border-left: 4px solid #fdcb6e;
     `
     notification.innerHTML = message
