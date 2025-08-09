@@ -1,7 +1,7 @@
 ---
 layout: post
-title: "Test Content"
-date: 2025-08-09T13:18:07.663Z
+title: "Test Content - editing title"
+date: 2025-08-09
 author: Anonymous
 slug: test-content
 user_cookie: user_f6b44utss_1754741902543
