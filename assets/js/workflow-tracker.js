@@ -66,27 +66,30 @@ class WorkflowTracker {
       }
     }
 
-    if (this.activeSubmissions && Object.entries(this.activeSubmissions).length > 0) {
-      const [url, submission] = Object.entries(this.activeSubmissions)[0] // getting the oldest entry
-      const { lastRun, timestamp, operation, submissionId, lastChecked } = submission
-      let message
-      if (lastRun) {
-        const { status, conclusion, createdAt } = lastRun
-        const formattedTimestamp = new Date(timestamp).toLocaleTimeString()
-        const formattedLastChecked = new Date(lastChecked).toLocaleTimeString()
-        message = `<p>${operation} operation status is ${status}.</p>`
-        message += `<p>Backend received data at ${formattedTimestamp}. Last check was done at ${formattedLastChecked}.</p>`
-        message += `<p>Status usually updates in approx 2 minutes from backend receiving the data. Refresh the page then.</p>`
-        message += `<p>Operation lifecycle - pending, queued, in-progress, completed</p>`
-      } else {
-        message = `<p>${operation} operation is pending. Refresh the page after 30 seconds to see an update.</p>`
-        message += `<p>Appropriate functionality will be blocked till this operation completes.</p>`
-      }
-      this.showNotification(message)
-    }
+    this.processAndShowNotification()
 
     // Clean up old submissions at the end
     if (cleanupOldSubmissions) await this.cleanupOldSubmissions()
+  }
+
+  processAndShowNotification() {
+    if (this.activeSubmissions && Object.entries(this.activeSubmissions).length > 0) {
+      const [url, submission] = Object.entries(this.activeSubmissions)[0] // getting the oldest entry
+      const { lastRun, timestamp, operation, submissionId, lastChecked } = submission
+
+      let title = `Backend is yet to start processing ${operation} operation`
+      let description = `Refresh the page after ${new Date(timestamp + 30000).toLocaleTimeString()} for an update`
+
+      if (lastRun) {
+        const { status, conclusion, createdAt } = lastRun
+        title = `${operation} operation status at backend is ${status}`
+        description = `Operation lifecycle - pending, queued, in-progress, completed. Refresh the page after ${new Date(
+          lastChecked + 30000
+        ).toLocaleTimeString()} for an update`
+      }
+
+      this.showNotification(title, description)
+    }
   }
 
   // Handle new post page restrictions
@@ -105,7 +108,7 @@ class WorkflowTracker {
 
   // Handle edit page restrictions
   handleEditPage(conflictType = "edit") {
-    const editForm = document.getElementById("submitBtn")
+    const editForm = document.getElementById("submissionForm")
     const submitButton = document.getElementById("submitBtn")
 
     let message = "An edit submission is already in progress for this post. Please wait for it to complete."
@@ -139,6 +142,9 @@ class WorkflowTracker {
       form.style.pointerEvents = "none"
     }
 
+    const successMessageTitle = document.getElementById("successMessageTitle")
+    successMessageTitle.textContent = message
+
     if (submitButton) {
       submitButton.disabled = true
       submitButton.textContent = progressText
@@ -147,37 +153,15 @@ class WorkflowTracker {
   }
 
   // Show notification to user
-  showNotification(message) {
-    // Remove existing notification if any
-    const existing = document.getElementById("workflow-notification")
-    if (existing) {
-      existing.remove()
+  showNotification(title, message = null) {
+    const notificationTitle = document.getElementById("notificationTitle")
+    notificationTitle.textContent = title
+    if (message) {
+      const notificationDescription = document.getElementById("notificationDescription")
+      notificationDescription.textContent = message
     }
-
-    // Create notification element
-    const notification = document.createElement("div")
-    notification.id = "workflow-notification"
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: #ffeaa7;
-      color: #2d3436;
-      padding: 15px 20px;
-      border-radius: 5px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      z-index: 1000;
-      max-width: 800px;
-      min-width: 600px;
-      font-size: 12px;
-      border-left: 4px solid #fdcb6e;
-    `
-    notification.innerHTML = message
-
-    document.body.appendChild(notification)
-
-    // Auto-remove after 10 seconds
+    const notification = document.getElementById("notification")
+    notification.classList.remove("hidden")
   }
 
   // Check workflow status (placeholder for future implementation)
@@ -268,33 +252,25 @@ class WorkflowTracker {
     if (updated) this.saveActiveSubmissions()
 
     submissionsRemoved.forEach((submission) => {
-      let message = "Operation is now complete, refresh the page to view updated content"
-      if (submission.operation === "new_post") {
-        message = "New post operation is now complete, refresh the page to view updated content"
-      } else if (submission.operation === "edit_post") {
-        message = "Edit post operation is now complete, refresh the page to view updated content"
-      } else if (submission.operation === "delete_post") {
-        message = "Delete post operation is now complete, refresh the page to view updated content"
-      }
-      this.showCompletionNotification(message)
+      this.showCompletionNotification(
+        `${submission.operation} is now complete. Your (updated) post/comment is now live.`
+      )
     })
   }
 
   // TODO - there should be a container to which multiple notification should be stacked on the top
   showCompletionNotification(message) {
-    const existing = document.getElementById("workflow-notification")
-    if (existing) {
-      existing.remove()
-    }
+    const notification = document.getElementById("notification")
+    notification.classList.add("hidden")
 
-    const notification = document.createElement("div")
-    notification.className = "completion-notification"
-    notification.style.cssText = `
+    const completedNotification = document.createElement("div")
+    completedNotification.className = "completion-notification"
+    completedNotification.style.cssText = `
     position: fixed;
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    background-color: #3498db;
+    background-color: #1fa445ff;
     color: white;
     padding: 15px 20px;
     border-radius: 5px;
@@ -305,9 +281,9 @@ class WorkflowTracker {
     font-size: 14px;
     line-height: 1.4;
   `
-    notification.textContent = message
+    completedNotification.textContent = message
 
-    document.body.appendChild(notification)
+    document.body.appendChild(completedNotification)
   }
 }
 
