@@ -39,19 +39,10 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
       const { postSlug, commentId, userCookie } = req.body
 
       // Validate required fields
-      if (!postSlug) {
+      if (!postSlug || !userCookie) {
         res.status(400).json({
           success: false,
-          error: "Post slug is required.",
-        })
-        return
-      }
-
-      // Check userCookie is provided (common requirement for both operations)
-      if (!userCookie) {
-        res.status(400).json({
-          success: false,
-          error: "User cookie is required.",
+          error: "Post slug and user cookie are required.",
         })
         return
       }
@@ -59,16 +50,10 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
       // Determine if this is comment deletion or post deletion
       const isCommentDeletion = commentId && commentId.trim() !== ""
 
-      // Initialize files to delete array
-      const filesToDelete = []
-      let commitMessage = ""
-
+      // Get content and verify ownership (common for both operations)
+      let contentToVerify
       if (isCommentDeletion) {
-        // Comment deletion logic
-        console.log(`Attempting to delete comment: ${commentId} from post: ${postSlug}`)
-
-        // First, get the comment to verify ownership
-        let commentContent
+        // Get comment content for ownership verification
         try {
           const commentResponse = await octokit.repos.getContent({
             owner: GITHUB_OWNER,
@@ -76,18 +61,7 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
             path: `_data/comments/${postSlug}/${commentId}.yml`,
             ref: GITHUB_BRANCH,
           })
-          
-          commentContent = Buffer.from(commentResponse.data.content, 'base64').toString('utf-8')
-          
-          // Check if userCookie matches
-          const userCookieMatch = commentContent.match(/userCookie:\s*(.+)/)
-          if (!userCookieMatch || userCookieMatch[1].trim() !== userCookie) {
-            res.status(403).json({
-              success: false,
-              error: "You can only delete your own comments.",
-            })
-            return
-          }
+          contentToVerify = Buffer.from(commentResponse.data.content, 'base64').toString('utf-8')
         } catch (error) {
           if (error.status === 404) {
             res.status(404).json({
@@ -98,6 +72,45 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
           }
           throw error
         }
+      } else {
+        // Get post content for ownership verification
+        try {
+          const postResponse = await octokit.repos.getContent({
+            owner: GITHUB_OWNER,
+            repo: GITHUB_REPO,
+            path: `_posts/${postSlug}/index.md`,
+            ref: GITHUB_BRANCH,
+          })
+          contentToVerify = Buffer.from(postResponse.data.content, 'base64').toString('utf-8')
+        } catch (error) {
+          if (error.status === 404) {
+            res.status(404).json({
+              success: false,
+              error: "Post not found.",
+            })
+            return
+          }
+          throw error
+        }
+      }
+
+      // Check if userCookie matches (common check for both operations)
+      const userCookieMatch = contentToVerify.match(/userCookie:\s*(.+)/)
+      if (!userCookieMatch || userCookieMatch[1].trim() !== userCookie) {
+        res.status(403).json({
+          success: false,
+          error: isCommentDeletion ? "You can only delete your own comments." : "You can only delete your own posts.",
+        })
+        return
+      }
+
+      // Initialize files to delete array
+      const filesToDelete = []
+      let commitMessage = ""
+
+      if (isCommentDeletion) {
+        // Comment deletion logic
+        console.log(`Attempting to delete comment: ${commentId} from post: ${postSlug}`)
 
         // Add comment file to deletion list
         filesToDelete.push({
@@ -106,15 +119,20 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
           encoding: null, // This marks the file for deletion
         })
 
-        // Check if comment has an associated image and add to deletion list
-        const imageMatch = commentContent.match(/image:\s*https:\/\/github\.com\/[^\/]+\/[^\/]+\/blob\/[^\/]+\/_posts\/[^\/]+\/(.+)\?raw=true/)
+        // Check if comment has an associated image using the image field from YAML
+        const imageMatch = contentToVerify.match(/image:\s*(.+)/)
         if (imageMatch) {
-          const imageFileName = imageMatch[1]
-          filesToDelete.push({
-            path: `_posts/${postSlug}/${imageFileName}`,
-            content: null,
-            encoding: null, // This marks the file for deletion
-          })
+          const imageUrl = imageMatch[1].trim()
+          // Extract filename from the GitHub URL
+          const urlMatch = imageUrl.match(/https:\/\/github\.com\/[^\/]+\/[^\/]+\/blob\/[^\/]+\/_posts\/[^\/]+\/(.+)\?raw=true/)
+          if (urlMatch) {
+            const imageFileName = urlMatch[1]
+            filesToDelete.push({
+              path: `_posts/${postSlug}/${imageFileName}`,
+              content: null,
+              encoding: null, // This marks the file for deletion
+            })
+          }
         }
 
         commitMessage = `Delete comment ${commentId} from post: ${postSlug}`
