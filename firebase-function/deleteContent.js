@@ -195,20 +195,16 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
       const result = await createSingleCommit(filesToDelete, commitMessage)
 
       // Send success response
-      const responseData = {
+      res.status(200).json({
         success: true,
         message: isCommentDeletion ? "Comment deleted successfully!" : "Post deleted successfully!",
         data: {
+          ...result,
           postSlug: postSlug,
           deletedFiles: filesToDelete.map(f => f.path),
+          ...(isCommentDeletion && { commentId: commentId }),
         },
-      }
-
-      if (isCommentDeletion) {
-        responseData.data.commentId = commentId
-      }
-
-      res.status(200).json(responseData)
+      })
 
     } catch (error) {
       console.error("Error in deleteContent:", error)
