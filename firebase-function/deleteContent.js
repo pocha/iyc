@@ -1,4 +1,5 @@
 const functions = require("firebase-functions")
+const yaml = require("js-yaml")
 const {
   corsHandler,
   octokit,
@@ -52,6 +53,7 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
 
       // Get content and verify ownership (common for both operations)
       let contentToVerify
+      let parsedContent
       if (isCommentDeletion) {
         // Get comment content for ownership verification
         try {
@@ -62,6 +64,8 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
             ref: GITHUB_BRANCH,
           })
           contentToVerify = Buffer.from(commentResponse.data.content, 'base64').toString('utf-8')
+          // Parse YAML content
+          parsedContent = yaml.load(contentToVerify)
         } catch (error) {
           if (error.status === 404) {
             res.status(404).json({
@@ -82,6 +86,11 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
             ref: GITHUB_BRANCH,
           })
           contentToVerify = Buffer.from(postResponse.data.content, 'base64').toString('utf-8')
+          // Parse YAML frontmatter for posts
+          const frontmatterMatch = contentToVerify.match(/^---\n([\s\S]*?)\n---/)
+          if (frontmatterMatch) {
+            parsedContent = yaml.load(frontmatterMatch[1])
+          }
         } catch (error) {
           if (error.status === 404) {
             res.status(404).json({
@@ -95,8 +104,7 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
       }
 
       // Check if userCookie matches (common check for both operations)
-      const userCookieMatch = contentToVerify.match(/userCookie:\s*(.+)/)
-      if (!userCookieMatch || userCookieMatch[1].trim() !== userCookie) {
+      if (!parsedContent || !parsedContent.userCookie || parsedContent.userCookie !== userCookie) {
         res.status(403).json({
           success: false,
           error: isCommentDeletion ? "You can only delete your own comments." : "You can only delete your own posts.",
@@ -119,10 +127,9 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
           encoding: null, // This marks the file for deletion
         })
 
-        // Check if comment has an associated image using the image field from YAML
-        const imageMatch = contentToVerify.match(/image:\s*(.+)/)
-        if (imageMatch) {
-          const imageUrl = imageMatch[1].trim()
+        // Check if comment has an associated image using the parsed YAML
+        if (parsedContent.image) {
+          const imageUrl = parsedContent.image
           // Extract filename from the GitHub URL
           const urlMatch = imageUrl.match(/https:\/\/github\.com\/[^\/]+\/[^\/]+\/blob\/[^\/]+\/_posts\/[^\/]+\/(.+)\?raw=true/)
           if (urlMatch) {
@@ -192,7 +199,6 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
         success: true,
         message: isCommentDeletion ? "Comment deleted successfully!" : "Post deleted successfully!",
         data: {
-          ...result,
           postSlug: postSlug,
           deletedFiles: filesToDelete.map(f => f.path),
         },
