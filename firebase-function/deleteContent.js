@@ -52,56 +52,10 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
       const isCommentDeletion = commentId && commentId.trim() !== ""
 
       // Get content and verify ownership (common for both operations)
-      let contentToVerify
-      let parsedContent
-      if (isCommentDeletion) {
-        // Get comment content for ownership verification
-        try {
-          const commentResponse = await octokit.repos.getContent({
-            owner: GITHUB_OWNER,
-            repo: GITHUB_REPO,
-            path: `_data/comments/${postSlug}/${commentId}.yml`,
-            ref: GITHUB_BRANCH,
-          })
-          contentToVerify = Buffer.from(commentResponse.data.content, 'base64').toString('utf-8')
-          // Parse YAML content
-          parsedContent = yaml.load(contentToVerify)
-        } catch (error) {
-          if (error.status === 404) {
-            res.status(404).json({
-              success: false,
-              error: "Comment not found.",
-            })
-            return
-          }
-          throw error
-        }
-      } else {
-        // Get post content for ownership verification
-        try {
-          const postResponse = await octokit.repos.getContent({
-            owner: GITHUB_OWNER,
-            repo: GITHUB_REPO,
-            path: `_posts/${postSlug}/index.md`,
-            ref: GITHUB_BRANCH,
-          })
-          contentToVerify = Buffer.from(postResponse.data.content, 'base64').toString('utf-8')
-          // Parse YAML frontmatter for posts
-          const frontmatterMatch = contentToVerify.match(/^---\n([\s\S]*?)\n---/)
-          if (frontmatterMatch) {
-            parsedContent = yaml.load(frontmatterMatch[1])
-          }
-        } catch (error) {
-          if (error.status === 404) {
-            res.status(404).json({
-              success: false,
-              error: "Post not found.",
-            })
-            return
-          }
-          throw error
-        }
-      }
+      let parsedContent = getContent(
+        isCommentDeletion ? `_data/comments/${postSlug}/${commentId}.yml` : `_posts/${postSlug}/index.md`,
+        isCommentDeletion
+      )
 
       // Check if userCookie matches (common check for both operations)
       if (!parsedContent || !parsedContent.userCookie || parsedContent.userCookie !== userCookie) {
@@ -126,85 +80,15 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
           content: null,
           encoding: null, // This marks the file for deletion
         })
-
-        // Check if comment has an associated image using the parsed YAML
-        if (parsedContent.image) {
-          const imageUrl = parsedContent.image
-          // Extract filename from the GitHub URL
-          const urlMatch = imageUrl.match(/https:\/\/github\.com\/[^\/]+\/[^\/]+\/blob\/[^\/]+\/_posts\/[^\/]+\/(.+)\?raw=true/)
-          if (urlMatch) {
-            const imageFileName = urlMatch[1]
-            filesToDelete.push({
-              path: `_posts/${postSlug}/${imageFileName}`,
-              content: null,
-              encoding: null, // This marks the file for deletion
-            })
-          }
-        }
+        addImageToDelete(parsedContent.image, filesToDelete)
 
         commitMessage = `Delete comment ${commentId} from post: ${postSlug}`
-
       } else {
         // Post deletion logic
         console.log(`Attempting to delete post: ${postSlug}`)
 
-        // Get files from post directory
-        const postDirPath = `_posts/${postSlug}`
-        try {
-          const postDirResponse = await octokit.repos.getContent({
-            owner: GITHUB_OWNER,
-            repo: GITHUB_REPO,
-            path: postDirPath,
-            ref: GITHUB_BRANCH,
-          })
-          
-          // Add all files from post directory
-          if (Array.isArray(postDirResponse.data)) {
-            postDirResponse.data.forEach((item) => {
-              if (item.type === 'file') {
-                filesToDelete.push({
-                  path: item.path,
-                  content: null,
-                  encoding: null, // This marks the file for deletion
-                })
-              }
-            })
-          }
-        } catch (error) {
-          if (error.status !== 404) {
-            throw error
-          }
-          // Post directory doesn't exist, continue
-        }
-
-        // Get files from comments directory
-        const commentDirPath = `_data/comments/${postSlug}`
-        try {
-          const commentDirResponse = await octokit.repos.getContent({
-            owner: GITHUB_OWNER,
-            repo: GITHUB_REPO,
-            path: commentDirPath,
-            ref: GITHUB_BRANCH,
-          })
-          
-          // Add all files from comments directory
-          if (Array.isArray(commentDirResponse.data)) {
-            commentDirResponse.data.forEach((item) => {
-              if (item.type === 'file') {
-                filesToDelete.push({
-                  path: item.path,
-                  content: null,
-                  encoding: null, // This marks the file for deletion
-                })
-              }
-            })
-          }
-        } catch (error) {
-          if (error.status !== 404) {
-            throw error
-          }
-          // Comments directory doesn't exist, continue
-        }
+        addFilesFromDirectoryToDelete(`_posts/${postSlug}`, filesToDelete)
+        addFilesFromDirectoryToDelete(`_data/comments/${postSlug}`, filesToDelete)
 
         console.log(`Files to delete: ${filesToDelete.map((f) => f.path).join(", ")}`)
 
@@ -222,17 +106,7 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
       const result = await createSingleCommit(filesToDelete, commitMessage)
 
       // Send success response
-      res.status(200).json({
-        success: true,
-        message: isCommentDeletion ? "Comment deleted successfully!" : "Post deleted successfully!",
-        data: {
-          ...result,
-          postSlug: postSlug,
-          deletedFiles: filesToDelete.map(f => f.path),
-          ...(isCommentDeletion && { commentId: commentId }),
-        },
-      })
-
+      res.status(200).json(result)
     } catch (error) {
       console.error("Error in deleteContent:", error)
       res.status(500).json({
@@ -242,3 +116,81 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
     }
   })
 })
+
+async function getContent(path, isCommentDeletion) {
+  try {
+    const commentResponse = await octokit.repos.getContent({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      path: path,
+      ref: GITHUB_BRANCH,
+    })
+    contentToVerify = Buffer.from(commentResponse.data.content, "base64").toString("utf-8")
+    if (!isCommentDeletion) {
+      const frontmatterMatch = contentToVerify.match(/^---\n([\s\S]*?)\n---/)
+      if (frontmatterMatch) {
+        return yaml.load(frontmatterMatch[1])
+      }
+    }
+    // Parse YAML content
+    return yaml.load(contentToVerify)
+  } catch (error) {
+    if (error.status === 404) {
+      res.status(404).json({
+        success: false,
+        error: "Post/Comment not found.",
+      })
+      return null
+    }
+    throw error
+  }
+}
+
+async function addFilesFromDirectoryToDelete(path, filesToDelete) {
+  const postDirPath = path
+  try {
+    const postDirResponse = await octokit.repos.getContent({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      path: postDirPath,
+      ref: GITHUB_BRANCH,
+    })
+
+    // Add all files from post directory
+    if (Array.isArray(postDirResponse.data)) {
+      postDirResponse.data.forEach((item) => {
+        if (item.type === "file") {
+          filesToDelete.push({
+            path: item.path,
+            content: null,
+            encoding: null, // This marks the file for deletion
+          })
+        }
+      })
+    }
+  } catch (error) {
+    if (error.status !== 404) {
+      throw error
+    }
+    // Post directory doesn't exist, continue
+  }
+}
+
+async function addImageToDelete(image, filesToDelete) {
+  // Check if comment has an associated image using the parsed YAML
+  if (image) {
+    const imageUrl = parsedContent.image
+    // Extract filename from the GitHub URL
+    const urlMatch = imageUrl.match(
+      /https:\/\/github\.com\/[^\/]+\/[^\/]+\/blob\/[^\/]+\/_posts\/[^\/]+\/(.+)\?raw=true/
+    )
+    if (urlMatch) {
+      const imageFileName = urlMatch[1]
+      filesToDelete.push({
+        path: `_posts/${postSlug}/${imageFileName}`,
+        content: null,
+        encoding: null, // This marks the file for deletion
+      })
+    }
+  }
+}
