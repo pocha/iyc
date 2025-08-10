@@ -17,7 +17,7 @@ document.getElementById("commentForm").addEventListener("submit", async function
       formData.delete("image")
     }
 
-    const response = await fetch("{{ site.firebase_url }}/submitComment", {
+    const response = await fetch(`${window.firebaseUrl}/submitComment`, {
       method: "POST",
       body: formData,
     })
@@ -100,7 +100,7 @@ function handleDeleteComment(commentId) {
   deleteBtn.disabled = true
 
   // Call Firebase delete function
-  fetch("{{ site.firebase_url }}/deleteComment", {
+  fetch(`${window.firebaseUrl}/deleteComment`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -196,7 +196,7 @@ document.getElementById("editCommentForm").addEventListener("submit", async func
       formData.append("userCookie", userCookie)
     }
 
-    const response = await fetch("{{ site.firebase_url }}/submitComment", {
+    const response = await fetch(`${window.firebaseUrl}/submitComment`, {
       method: "POST",
       body: formData,
     })
