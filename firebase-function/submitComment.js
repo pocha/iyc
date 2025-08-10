@@ -44,7 +44,7 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
         imageOnly: true,
       })
 
-      const { postSlug, comment, commentId, userCookie, name } = fields
+      const { postSlug, comment, commentId, userCookie } = fields
 
       // Validate required fields
       if (!postSlug || !comment || !userCookie) {
@@ -70,7 +70,7 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
       let commentContent = `_id: ${finalCommentId}
 date: ${isEditMode ? timestamp : timestamp}
 name: ${name || "Anonymous"}
-userCookie: ${userCookie}
+name: Anonymous
 message: ${comment}`
 
       // Prepare files for single commit
