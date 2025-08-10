@@ -48,17 +48,20 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
         return
       }
 
-      // Determine if this is comment deletion or post deletion
+      // Check if userCookie matches (common check for both operations)
       const isCommentDeletion = commentId && commentId.trim() !== ""
-
-      // Get content and verify ownership (common for both operations)
-      let parsedContent = getContent(
+      
+      // Get content and verify ownership
+      const parsedContent = await getContent(
         isCommentDeletion ? `_data/comments/${postSlug}/${commentId}.yml` : `_posts/${postSlug}/index.md`,
         isCommentDeletion
       )
 
-      // Check if userCookie matches (common check for both operations)
-      if (!parsedContent || !parsedContent.userCookie || parsedContent.userCookie !== userCookie) {
+      if (!parsedContent) {
+        return // Error response already sent in getContent
+      }
+
+      if (!parsedContent.userCookie || parsedContent.userCookie !== userCookie) {
         res.status(403).json({
           success: false,
           error: isCommentDeletion ? "You can only delete your own comments." : "You can only delete your own posts.",
@@ -80,15 +83,15 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
           content: null,
           encoding: null, // This marks the file for deletion
         })
-        addImageToDelete(parsedContent.image, filesToDelete)
-
+        
+        await addImageToDelete(parsedContent.image, postSlug, filesToDelete)
         commitMessage = `Delete comment ${commentId} from post: ${postSlug}`
       } else {
         // Post deletion logic
         console.log(`Attempting to delete post: ${postSlug}`)
 
-        addFilesFromDirectoryToDelete(`_posts/${postSlug}`, filesToDelete)
-        addFilesFromDirectoryToDelete(`_data/comments/${postSlug}`, filesToDelete)
+        await addFilesFromDirectoryToDelete(`_posts/${postSlug}`, filesToDelete)
+        await addFilesFromDirectoryToDelete(`_data/comments/${postSlug}`, filesToDelete)
 
         console.log(`Files to delete: ${filesToDelete.map((f) => f.path).join(", ")}`)
 
@@ -119,27 +122,26 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
 
 async function getContent(path, isCommentDeletion) {
   try {
-    const commentResponse = await octokit.repos.getContent({
+    const contentResponse = await octokit.repos.getContent({
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
       path: path,
       ref: GITHUB_BRANCH,
     })
-    contentToVerify = Buffer.from(commentResponse.data.content, "base64").toString("utf-8")
+
+    const contentToVerify = Buffer.from(contentResponse.data.content, "base64").toString("utf-8")
+    
     if (!isCommentDeletion) {
+      // For posts, extract frontmatter
       const frontmatterMatch = contentToVerify.match(/^---\n([\s\S]*?)\n---/)
       if (frontmatterMatch) {
         return yaml.load(frontmatterMatch[1])
       }
     }
-    // Parse YAML content
+    // For comments, parse entire YAML content
     return yaml.load(contentToVerify)
   } catch (error) {
     if (error.status === 404) {
-      res.status(404).json({
-        success: false,
-        error: "Post/Comment not found.",
-      })
       return null
     }
     throw error
@@ -147,18 +149,17 @@ async function getContent(path, isCommentDeletion) {
 }
 
 async function addFilesFromDirectoryToDelete(path, filesToDelete) {
-  const postDirPath = path
   try {
-    const postDirResponse = await octokit.repos.getContent({
+    const dirResponse = await octokit.repos.getContent({
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
-      path: postDirPath,
+      path: path,
       ref: GITHUB_BRANCH,
     })
 
-    // Add all files from post directory
-    if (Array.isArray(postDirResponse.data)) {
-      postDirResponse.data.forEach((item) => {
+    // Add all files from directory
+    if (Array.isArray(dirResponse.data)) {
+      dirResponse.data.forEach((item) => {
         if (item.type === "file") {
           filesToDelete.push({
             path: item.path,
@@ -172,16 +173,15 @@ async function addFilesFromDirectoryToDelete(path, filesToDelete) {
     if (error.status !== 404) {
       throw error
     }
-    // Post directory doesn't exist, continue
+    // Directory doesn't exist, continue
   }
 }
 
-async function addImageToDelete(image, filesToDelete) {
+async function addImageToDelete(image, postSlug, filesToDelete) {
   // Check if comment has an associated image using the parsed YAML
   if (image) {
-    const imageUrl = parsedContent.image
     // Extract filename from the GitHub URL
-    const urlMatch = imageUrl.match(
+    const urlMatch = image.match(
       /https:\/\/github\.com\/[^\/]+\/[^\/]+\/blob\/[^\/]+\/_posts\/[^\/]+\/(.+)\?raw=true/
     )
     if (urlMatch) {
