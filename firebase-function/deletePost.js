@@ -71,18 +71,8 @@ exports.deletePost = functions.region("asia-south1").https.onRequest(async (req,
       // Use createSingleCommit to delete all files in one commit
       const result = await createSingleCommit(filesToProcess, `Delete post: ${postSlug}`)
 
-      const githubUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/commit/${result.commitSha}`
-
       // Send success response
-      res.status(200).json({
-        success: true,
-        message: "Post deleted successfully!",
-        data: {
-          postSlug: postSlug,
-          githubUrl: githubUrl,
-          deletedAt: new Date().toISOString(),
-        },
-      })
+      res.status(200).json(result)
     } catch (error) {
       console.error("Error in deletePost:", error)
       res.status(500).json({
