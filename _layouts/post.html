@@ -76,59 +76,61 @@ layout: default
     <!-- Comments Section -->
     <div class="mt-8 pt-6 border-t border-gray-200">
       <h3 class="text-xl font-bold text-gray-900 mb-4">Comments</h3>
-      {% if comments.size > 0 %} 
-{% for comment_hash in comments %} 
-{% assign comment = comment_hash[1] %}
-{% assign comment_id = comment_hash[0] %}
-<div class="bg-gray-50 rounded-lg p-4 border border-gray-200" data-comment-id="{{ comment_id }}">
- <div class="flex items-center justify-between mb-2">
-<span class="font-semibold text-gray-900">{{ comment.name | default: "Anonymous" }}</span>
-<div class="flex items-center space-x-2">
-<span class="text-sm text-gray-500">{{ comment.date | date: "%B %d, %Y at %I:%M %p" }}</span>
-<!-- Comment Owner Actions -->
-<div class="comment-owner-actions" style="display: none;" data-user-cookie="{{ comment.userCookie }}">
-<button
-class="edit-comment-btn bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-all"
-data-comment-id="{{ comment_id }}"
-data-comment-text="{{ comment.message | escape }}"
-data-comment-image="{{ comment.image }}"
->
-<svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
-<path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"></path>
-</svg>
-Edit
-</button>
-<button
-class="delete-comment-btn bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700 transition-all"
-data-comment-id="{{ comment_id }}"
->
-<svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
-<path fill-rule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clip-rule="evenodd"></path>
-<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1.707-6.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-</svg>
-Delete
-</button>
-</div>
-</div>
- </div>
- <div class="text-gray-700">
-{{ comment.message }} 
-{% if comment.image %}
-<div class="mt-3">
- <img
-src="{{ comment.image }}"
-alt="Comment attachment"
-class="max-w-full h-auto rounded-lg border border-gray-300 shadow-sm cursor-pointer"
-onclick="openImageModal(this.src)"
-style="max-height: 300px"
-/>
-</div>
-{% endif %}
- </div>
-</div>
-{% endfor %}
-      {% else %}
-        <p class="text-gray-500 italic">No comments yet. Be the first to comment.</p>
+      {% if comments.size > 0 %} {% for comment_hash in comments %} {% assign comment = comment_hash[1] %} {% assign
+      comment_id = comment_hash[0] %}
+      <div class="bg-gray-50 rounded-lg p-4 border border-gray-200" data-comment-id="{{ comment_id }}">
+        <div class="flex items-center justify-between mb-2">
+          <span class="font-semibold text-gray-900">{{ comment.name | default: "Anonymous" }}</span>
+          <div class="flex items-center space-x-2">
+            <span class="text-sm text-gray-500">{{ comment.date | date: "%B %d, %Y at %I:%M %p" }}</span>
+            <!-- Comment Owner Actions -->
+            <div class="comment-owner-actions" style="display: none" data-user-cookie="{{ comment.userCookie }}">
+              <button
+                class="edit-comment-btn bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-all"
+                data-comment-id="{{ comment_id }}"
+                data-comment-text="{{ comment.message | escape }}"
+                data-comment-image="{{ comment.image }}"
+              >
+                <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path
+                    d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                  ></path>
+                </svg>
+                Edit
+              </button>
+              <button
+                class="delete-comment-btn bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700 transition-all"
+                data-comment-id="{{ comment_id }}"
+              >
+                <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clip-rule="evenodd"></path>
+                  <path
+                    fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1.707-6.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clip-rule="evenodd"
+                  ></path>
+                </svg>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="text-gray-700">
+          {{ comment.message }} {% if comment.image %}
+          <div class="mt-3">
+            <img
+              src="{{ comment.image }}"
+              alt="Comment attachment"
+              class="max-w-full h-auto rounded-lg border border-gray-300 shadow-sm cursor-pointer"
+              onclick="openImageModal(this.src)"
+              style="max-height: 300px"
+            />
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %} {% else %}
+      <p class="text-gray-500 italic">No comments yet. Be the first to comment.</p>
       {% endif %}
     </div>
 
@@ -342,76 +344,75 @@ style="max-height: 300px"
           })
       }
     })
-    // Initialize post ownership check
+</script>
+// Initialize post ownership check
 
-    <!-- Edit Comment Modal -->
-    <div id="editCommentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
-      <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-md bg-white">
-        <div class="mt-3">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-medium text-gray-900">Edit Comment</h3>
-            <button id="closeEditCommentModal" class="text-gray-400 hover:text-gray-600">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-            </button>
-          </div>
-          
-          <form id="editCommentForm" enctype="multipart/form-data">
-            <input type="hidden" id="editCommentId" name="commentId">
-            <input type="hidden" name="postSlug" value="{{ page.slug }}">
-            <input type="hidden" name="editMode" value="true">
-            
-            <div class="mb-4">
-              <label for="editCommentText" class="block text-sm font-medium text-gray-700 mb-2">Comment</label>
-              <textarea 
-                id="editCommentText" 
-                name="message" 
-                rows="4" 
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                required
-              ></textarea>
-            </div>
-            
-            <div class="mb-4">
-              <label for="editCommentImage" class="block text-sm font-medium text-gray-700 mb-2">
-                Update Image (optional)
-              </label>
-              <input 
-                type="file" 
-                id="editCommentImage" 
-                name="image" 
-                accept="image/*" 
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-              <div id="currentCommentImage" class="mt-2 hidden">
-                <p class="text-sm text-gray-600 mb-2">Current image:</p>
-                <img id="currentCommentImagePreview" src="" alt="Current comment image" class="max-w-xs rounded-lg">
-              </div>
-            </div>
-            
-            <div id="editCommentStatus" class="mb-4 hidden"></div>
-            
-            <div class="flex justify-end space-x-3">
-              <button 
-                type="button" 
-                id="cancelEditComment" 
-                class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-all"
-              >
-                Cancel
-              </button>
-              <button 
-                type="submit" 
-                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-all"
-              >
-                Update Comment
-              </button>
-            </div>
-          </form>
-        </div>
+<!-- Edit Comment Modal -->
+<div id="editCommentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+  <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Edit Comment</h3>
+        <button id="closeEditCommentModal" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
       </div>
-    </div>
 
+      <form id="editCommentForm" enctype="multipart/form-data">
+        <input type="hidden" id="editCommentId" name="commentId" />
+        <input type="hidden" name="postSlug" value="{{ page.slug }}" />
+        <input type="hidden" name="editMode" value="true" />
+
+        <div class="mb-4">
+          <label for="editCommentText" class="block text-sm font-medium text-gray-700 mb-2">Comment</label>
+          <textarea
+            id="editCommentText"
+            name="message"
+            rows="4"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            required
+          ></textarea>
+        </div>
+
+        <div class="mb-4">
+          <label for="editCommentImage" class="block text-sm font-medium text-gray-700 mb-2">
+            Update Image (optional)
+          </label>
+          <input
+            type="file"
+            id="editCommentImage"
+            name="image"
+            accept="image/*"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          <div id="currentCommentImage" class="mt-2 hidden">
+            <p class="text-sm text-gray-600 mb-2">Current image:</p>
+            <img id="currentCommentImagePreview" src="" alt="Current comment image" class="max-w-xs rounded-lg" />
+          </div>
+        </div>
+
+        <div id="editCommentStatus" class="mb-4 hidden"></div>
+
+        <div class="flex justify-end space-x-3">
+          <button
+            type="button"
+            id="cancelEditComment"
+            class="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-all"
+          >
+            Cancel
+          </button>
+          <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-all">
+            Update Comment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
     // Comment ownership and edit/delete functionality
     function revealCommentActionsIfRequired() {
       const userCookie = window.cookieManager.getCookie()
@@ -433,11 +434,11 @@ style="max-height: 300px"
       const commentTextArea = document.getElementById('editCommentText')
       const currentImageDiv = document.getElementById('currentCommentImage')
       const currentImagePreview = document.getElementById('currentCommentImagePreview')
-      
+
       // Set form values
       commentIdInput.value = commentId
       commentTextArea.value = commentText
-      
+
       // Handle current image
       if (commentImage && commentImage.trim() !== '') {
         currentImageDiv.classList.remove('hidden')
@@ -445,12 +446,12 @@ style="max-height: 300px"
       } else {
         currentImageDiv.classList.add('hidden')
       }
-      
+
       // Update URL
       const url = new URL(window.location)
       url.searchParams.set('editComment', commentId)
       window.history.pushState({}, '', url)
-      
+
       // Show modal
       modal.classList.remove('hidden')
     }
@@ -491,7 +492,7 @@ style="max-height: 300px"
                 Date.now()
               )
             }
-            
+
             // Remove comment from DOM
             commentElement.remove()
             alert("Comment deleted successfully!")
@@ -517,7 +518,7 @@ style="max-height: 300px"
         const commentImage = btn.getAttribute('data-comment-image')
         handleEditComment(commentId, commentText, commentImage)
       }
-      
+
       if (e.target.closest('.delete-comment-btn')) {
         const btn = e.target.closest('.delete-comment-btn')
         const commentId = btn.getAttribute('data-comment-id')
@@ -557,7 +558,7 @@ style="max-height: 300px"
 
       try {
         const formData = new FormData(e.target)
-        
+
         // Add user cookie
         const userCookie = window.cookieManager.getCookie()
         if (userCookie) {
@@ -595,7 +596,7 @@ style="max-height: 300px"
         console.error("Error updating comment:", error)
         statusDiv.innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">Error: ${error.message}</div>`
         statusDiv.className = "mb-4"
-        
+
         // Restore button
         submitBtn.innerHTML = originalBtnText
         submitBtn.disabled = false
@@ -606,7 +607,7 @@ style="max-height: 300px"
     function checkEditCommentFromURL() {
       const urlParams = new URLSearchParams(window.location.search)
       const editCommentId = urlParams.get('editComment')
-      
+
       if (editCommentId) {
         // Find the comment and trigger edit
         const commentElement = document.querySelector(`[data-comment-id="${editCommentId}"]`)

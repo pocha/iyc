@@ -61,15 +61,15 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
       const timeStr = now.toISOString()
 
       // Determine if this is edit or create mode
-      const isEditMode = commentId && commentId.trim() !== ''
-      
+      const isEditMode = commentId && commentId.trim() !== ""
+
       // Generate comment ID for new comments or use existing for edits
       const finalCommentId = isEditMode ? commentId : `comment-${timeStr.replace(/[:.]/g, "-")}`
 
       // Create comment content in YAML format for Staticman structure
       let commentContent = `_id: ${finalCommentId}
 date: ${isEditMode ? timestamp : timestamp}
-name: ${name || 'Anonymous'}
+name: ${name || "Anonymous"}
 userCookie: ${userCookie}
 message: ${comment}`
 
@@ -110,10 +110,10 @@ image: ${imageUrl}`
       })
 
       // Use the generic single commit function
-      const commitMessage = isEditMode ? 
-        `Edit comment ${finalCommentId} in post: ${postSlug}` : 
-        `Add comment to post: ${postSlug}`
-      
+      const commitMessage = isEditMode
+        ? `Edit comment ${finalCommentId} in post: ${postSlug}`
+        : `Add comment to post: ${postSlug}`
+
       const result = await createSingleCommit(filesToCreate, commitMessage)
 
       // Send success response
