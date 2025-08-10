@@ -102,9 +102,7 @@ function handleDeleteComment(commentId) {
   deleteBtn.innerHTML =
     '<svg class="w-3 h-3 inline mr-1 animate-spin" fill="currentColor" viewBox="0 0 20 20"><path d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2H4z"></path></svg>Deleting...'
   deleteBtn.disabled = true
-
-  // Call Firebase delete function
-  fetch(`${window.firebaseUrl}/deleteComment`, {
+  fetch(`${window.firebaseUrl}/deleteContent`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

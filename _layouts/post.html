@@ -262,7 +262,7 @@ layout: default
         deleteBtn.disabled = true
 
         // Call Firebase delete function
-        fetch("{{ site.firebase_url }}/deletePost", {
+        fetch("{{ site.firebase_url }}/deleteContent", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
