@@ -67,10 +67,10 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
       const finalCommentId = isEditMode ? commentId : `comment-${timeStr.replace(/[:.]/g, "-")}`
 
       // Create comment content in YAML format for Staticman structure
+      // Create comment content in YAML format for Staticman structure
       let commentContent = `_id: ${finalCommentId}
 date: ${isEditMode ? timestamp : timestamp}
-name: ${name || "Anonymous"}
-name: Anonymous
+userCookie: ${userCookie}
 message: ${comment}`
 
       // Prepare files for single commit
