@@ -44,29 +44,33 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
         imageOnly: true,
       })
 
-      const { postSlug, comment } = fields
+      const { postSlug, comment, commentId, userCookie, name } = fields
 
       // Validate required fields
-      if (!postSlug || !comment) {
+      if (!postSlug || !comment || !userCookie) {
         res.status(400).json({
           success: false,
-          error: "Post slug and comment are required fields.",
+          error: "Post slug, comment, and user cookie are required fields.",
         })
         return
       }
 
-      // Generate timestamp for comment
+      // Generate timestamp
       const now = new Date()
       const timestamp = now.toISOString()
       const timeStr = now.toISOString()
 
-      // Generate comment ID and sanitized timestamp for filename
-      const commentId = `comment-${timeStr.replace(/[:.]/g, "-")}`
+      // Determine if this is edit or create mode
+      const isEditMode = commentId && commentId.trim() !== ''
+      
+      // Generate comment ID for new comments or use existing for edits
+      const finalCommentId = isEditMode ? commentId : `comment-${timeStr.replace(/[:.]/g, "-")}`
 
       // Create comment content in YAML format for Staticman structure
-      let commentContent = `_id: ${commentId}
-date: ${timestamp}
-name: Anonymous
+      let commentContent = `_id: ${finalCommentId}
+date: ${isEditMode ? timestamp : timestamp}
+name: ${name || 'Anonymous'}
+userCookie: ${userCookie}
 message: ${comment}`
 
       // Prepare files for single commit
@@ -96,7 +100,7 @@ image: ${imageUrl}`
       }
 
       // Create comment file in the Staticman structure
-      const commentPath = `_data/comments/${postSlug}/${commentId}.yml`
+      const commentPath = `_data/comments/${postSlug}/${finalCommentId}.yml`
 
       // Add comment file to the commit
       filesToCreate.push({
@@ -106,17 +110,23 @@ image: ${imageUrl}`
       })
 
       // Use the generic single commit function
-      const result = await createSingleCommit(filesToCreate, `Add comment to post: ${postSlug}`)
+      const commitMessage = isEditMode ? 
+        `Edit comment ${finalCommentId} in post: ${postSlug}` : 
+        `Add comment to post: ${postSlug}`
+      
+      const result = await createSingleCommit(filesToCreate, commitMessage)
 
       // Send success response
       res.status(200).json({
         success: true,
-        message: "Comment submitted successfully!",
+        message: isEditMode ? "Comment updated successfully!" : "Comment submitted successfully!",
         data: {
           ...result,
           postSlug: postSlug,
           comment: comment,
+          commentId: finalCommentId,
           submittedAt: timestamp,
+          isEdit: isEditMode,
         },
       })
     } catch (error) {
@@ -128,4 +138,3 @@ image: ${imageUrl}`
     }
   })
 })
-// Delete Post Function
