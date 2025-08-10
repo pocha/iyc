@@ -17,6 +17,10 @@ document.getElementById("commentForm").addEventListener("submit", async function
       formData.delete("image")
     }
 
+    // Add user cookie (create one if user doesn't have one)
+    const userCookie = getOrSetUserCookie()
+    formData.append("userCookie", userCookie)
+
     const response = await fetch(`${window.firebaseUrl}/submitComment`, {
       method: "POST",
       body: formData,
