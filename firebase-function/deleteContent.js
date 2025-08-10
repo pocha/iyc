@@ -47,18 +47,25 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
         return
       }
 
+      // Check userCookie is provided (common requirement for both operations)
+      if (!userCookie) {
+        res.status(400).json({
+          success: false,
+          error: "User cookie is required.",
+        })
+        return
+      }
+
       // Determine if this is comment deletion or post deletion
       const isCommentDeletion = commentId && commentId.trim() !== ""
 
+      // Initialize files to delete array
+      const filesToDelete = []
+      let commitMessage = ""
+
       if (isCommentDeletion) {
         // Comment deletion logic
-        if (!userCookie) {
-          res.status(400).json({
-            success: false,
-            error: "User cookie is required for comment deletion.",
-          })
-          return
-        }
+        console.log(`Attempting to delete comment: ${commentId} from post: ${postSlug}`)
 
         // First, get the comment to verify ownership
         let commentContent
@@ -92,10 +99,7 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
           throw error
         }
 
-        // Prepare files to delete for comment
-        const filesToDelete = []
-
-        // Add comment file
+        // Add comment file to deletion list
         filesToDelete.push({
           path: `_data/comments/${postSlug}/${commentId}.yml`,
           content: null,
@@ -113,20 +117,7 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
           })
         }
 
-        // Use createSingleCommit to delete comment files
-        const result = await createSingleCommit(filesToDelete, `Delete comment ${commentId} from post: ${postSlug}`)
-
-        // Send success response
-        res.status(200).json({
-          success: true,
-          message: "Comment deleted successfully!",
-          data: {
-            ...result,
-            postSlug: postSlug,
-            commentId: commentId,
-            deletedFiles: filesToDelete.map(f => f.path),
-          },
-        })
+        commitMessage = `Delete comment ${commentId} from post: ${postSlug}`
 
       } else {
         // Post deletion logic
@@ -149,10 +140,7 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
         })
         const treeData = treeResponse.data
 
-        // Create array of files to delete by targeting specific paths
-        const filesToDelete = []
-
-        // Add post directory files and comment directory files
+        // Add post directory files and comment directory files to deletion list
         const postDirPath = `_posts/${postSlug}`
         const commentDirPath = `_data/comments/${postSlug}`
 
@@ -175,20 +163,28 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
           })
         }
 
-        // Use createSingleCommit to delete all files in one commit
-        const result = await createSingleCommit(filesToDelete, `Delete post: ${postSlug}`)
-
-        // Send success response
-        res.status(200).json({
-          success: true,
-          message: "Post deleted successfully!",
-          data: {
-            ...result,
-            postSlug: postSlug,
-            deletedFiles: filesToDelete.map(f => f.path),
-          },
-        })
+        commitMessage = `Delete post: ${postSlug}`
       }
+
+      // Use createSingleCommit to delete all files in one commit
+      const result = await createSingleCommit(filesToDelete, commitMessage)
+
+      // Send success response
+      const responseData = {
+        success: true,
+        message: isCommentDeletion ? "Comment deleted successfully!" : "Post deleted successfully!",
+        data: {
+          ...result,
+          postSlug: postSlug,
+          deletedFiles: filesToDelete.map(f => f.path),
+        },
+      }
+
+      if (isCommentDeletion) {
+        responseData.data.commentId = commentId
+      }
+
+      res.status(200).json(responseData)
 
     } catch (error) {
       console.error("Error in deleteContent:", error)
