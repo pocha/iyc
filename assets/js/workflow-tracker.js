@@ -100,7 +100,7 @@ class WorkflowTracker {
     this.blockForm(
       postForm,
       submitButton,
-      "A new post submission is already in progress. Please wait for it to complete.",
+      "Post is submitted & backend is processing it...",
       "Submit Post",
       "Submission in Progress..."
     )
