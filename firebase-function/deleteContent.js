@@ -148,36 +148,63 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
         // Post deletion logic
         console.log(`Attempting to delete post: ${postSlug}`)
 
-        // Get current branch reference to get the latest SHA
-        const branchRef = await octokit.rest.git.getRef({
-          owner: GITHUB_OWNER,
-          repo: GITHUB_REPO,
-          ref: `heads/${GITHUB_BRANCH}`,
-        })
-        const currentSha = branchRef.data.object.sha
-
-        // Get the current tree
-        const treeResponse = await octokit.rest.git.getTree({
-          owner: GITHUB_OWNER,
-          repo: GITHUB_REPO,
-          tree_sha: currentSha,
-          recursive: true,
-        })
-        const treeData = treeResponse.data
-
-        // Add post directory files and comment directory files to deletion list
+        // Get files from post directory
         const postDirPath = `_posts/${postSlug}`
-        const commentDirPath = `_data/comments/${postSlug}`
-
-        treeData.tree.forEach((item) => {
-          if (item.path.startsWith(postDirPath + "/") || item.path.startsWith(commentDirPath + "/")) {
-            filesToDelete.push({
-              path: item.path,
-              content: null,
-              encoding: null, // This marks the file for deletion
+        try {
+          const postDirResponse = await octokit.repos.getContent({
+            owner: GITHUB_OWNER,
+            repo: GITHUB_REPO,
+            path: postDirPath,
+            ref: GITHUB_BRANCH,
+          })
+          
+          // Add all files from post directory
+          if (Array.isArray(postDirResponse.data)) {
+            postDirResponse.data.forEach((item) => {
+              if (item.type === 'file') {
+                filesToDelete.push({
+                  path: item.path,
+                  content: null,
+                  encoding: null, // This marks the file for deletion
+                })
+              }
             })
           }
-        })
+        } catch (error) {
+          if (error.status !== 404) {
+            throw error
+          }
+          // Post directory doesn't exist, continue
+        }
+
+        // Get files from comments directory
+        const commentDirPath = `_data/comments/${postSlug}`
+        try {
+          const commentDirResponse = await octokit.repos.getContent({
+            owner: GITHUB_OWNER,
+            repo: GITHUB_REPO,
+            path: commentDirPath,
+            ref: GITHUB_BRANCH,
+          })
+          
+          // Add all files from comments directory
+          if (Array.isArray(commentDirResponse.data)) {
+            commentDirResponse.data.forEach((item) => {
+              if (item.type === 'file') {
+                filesToDelete.push({
+                  path: item.path,
+                  content: null,
+                  encoding: null, // This marks the file for deletion
+                })
+              }
+            })
+          }
+        } catch (error) {
+          if (error.status !== 404) {
+            throw error
+          }
+          // Comments directory doesn't exist, continue
+        }
 
         console.log(`Files to delete: ${filesToDelete.map((f) => f.path).join(", ")}`)
 
