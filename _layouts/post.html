@@ -137,7 +137,7 @@ layout: default
     <!-- Comment Form -->
     <div class="bg-gray-50 rounded-lg p-6 border border-gray-200">
       <form id="commentForm" class="space-y-4" enctype="multipart/form-data">
-        <input type="hidden" name="postSlug" value="{{ post_slug }}" />
+        <input type="hidden" name="postSlug" value="{{ page.slug }}" />
         <div>
           <textarea
             id="comment"
