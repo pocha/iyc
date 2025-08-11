@@ -57,7 +57,7 @@ class WorkflowTracker {
         if (operation === "delete_post") this.handlePostViewPage(slug, "delete")
         if (operation === "new_comment" || operation === "edit_comment" || operation === "delete_comment") {
           this.handleCommentForm()
-          this.handleEditDeleteButtons()
+          this.handleEditDeleteButtons(submissionId)
         }
       } else if (currentUrl.includes(slug)) {
         if (isEditPage) {
@@ -154,9 +154,9 @@ class WorkflowTracker {
   }
 
   // Handle edit/delete buttons for comments
-  handleEditDeleteButtons() {
-    const editButtons = document.querySelectorAll(".edit-comment-btn")
-    const deleteButtons = document.querySelectorAll(".delete-comment-btn")
+  handleEditDeleteButtons(commentId) {
+    const editButtons = document.querySelectorAll(`[data-comment-id="${commentId}"] .edit-comment-btn, .edit-comment-btn[data-comment-id="${commentId}"]`)
+    const deleteButtons = document.querySelectorAll(`[data-comment-id="${commentId}"] .delete-comment-btn, .delete-comment-btn[data-comment-id="${commentId}"]`)
 
     editButtons.forEach((button) => {
       button.disabled = true
