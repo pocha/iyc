@@ -109,18 +109,7 @@ image: ${imageUrl}`
       const result = await createSingleCommit(filesToCreate, commitMessage)
 
       // Send success response
-      res.status(200).json({
-        success: true,
-        message: isEditMode ? "Comment updated successfully!" : "Comment submitted successfully!",
-        data: {
-          ...result,
-          postSlug: postSlug,
-          comment: comment,
-          commentId: finalCommentId,
-          submittedAt: timestamp,
-          isEdit: isEditMode,
-        },
-      })
+      res.status(200).json(result)
     } catch (error) {
       console.error("Error in submitComment:", error)
       res.status(500).json({
