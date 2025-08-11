@@ -13,9 +13,14 @@ async function submitCommentForm(formData, imageElementId, operation) {
 
   if (result.success) {
     if (window.workflowTracker && result.commitSha) {
+      let submissionId = null
+      if (operation === "edit_comment") {
+        submissionId = document.getElementById("editCommentId").value
+      }
+      
       window.workflowTracker.trackSubmission(
-        window.location.href,
-        "{{ page.slug }}",
+        window.postSlug,
+        submissionId,
         operation,
         result.commitSha,
         Date.now()
@@ -88,7 +93,7 @@ document.getElementById("editCommentForm").addEventListener("submit", async func
 
   // Show loading state
   submitBtn.innerHTML =
-    '<svg class="w-4 h-4 inline mr-1 animate-spin" fill="currentColor" viewBox="0 0 20 20"><path d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2H4z"></path></svg>Updating...'
+    '<svg class="w-4 h-4 inline mr-1 animate-spin" fill="currentColor" viewBox="0 0 20 20"><path d="M4 2a2 2 0 00-2 2v12a2 2 0 002-2V4a2 2 0 00-2-2H4z"></path></svg>Updating...'
   submitBtn.disabled = true
   statusDiv.className = "mb-4 hidden"
 
@@ -116,10 +121,10 @@ document.getElementById("editCommentForm").addEventListener("submit", async func
     }
   } catch (error) {
     console.error("Error updating comment:", error)
-    statusDiv.innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">Error: ${error.message}</div>`
+    statusDiv.innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">Error updating comment: ${error.message}</div>`
     statusDiv.className = "mb-4"
-
-    // Restore button
+  } finally {
+    // Reset button
     submitBtn.innerHTML = originalBtnText
     submitBtn.disabled = false
   }
@@ -165,7 +170,7 @@ function handleDeleteComment(commentId, postDate) {
   const deleteBtn = commentElement.querySelector(".delete-comment-btn")
   const originalText = deleteBtn.innerHTML
   deleteBtn.innerHTML =
-    '<svg class="w-3 h-3 inline mr-1 animate-spin" fill="currentColor" viewBox="0 0 20 20"><path d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2H4z"></path></svg>Deleting...'
+    '<svg class="w-3 h-3 inline mr-1 animate-spin" fill="currentColor" viewBox="0 0 20 20"><path d="M4 2a2 2 0 00-2 2v12a2 2 0 002-2V4a2 2 0 00-2-2H4z"></path></svg>Deleting...'
   deleteBtn.disabled = true
   fetch(`${window.firebaseUrl}/deleteContent`, {
     method: "POST",
@@ -184,8 +189,8 @@ function handleDeleteComment(commentId, postDate) {
       if (data.success) {
         if (window.workflowTracker && data.commitSha) {
           window.workflowTracker.trackSubmission(
-            window.location.href,
-            "{{ page.slug }}",
+            window.postSlug,
+            commentId,
             "delete_comment",
             data.commitSha,
             Date.now()
@@ -235,12 +240,9 @@ function closeEditFormModal() {
   window.history.pushState({}, "", url)
 }
 
-// Modal close functionality
-document.getElementById("closeEditCommentModal").addEventListener("click", closeEditFormModal)
+document.getElementById("closeEditFormModal").addEventListener("click", closeEditFormModal)
 
 document.getElementById("cancelEditComment").addEventListener("click", closeEditFormModal)
-
-// Edit comment form submission
 
 // Check URL for direct edit comment access
 function checkEditCommentFromURL() {
@@ -261,8 +263,56 @@ function checkEditCommentFromURL() {
   }
 }
 
+// Workflow blocking functionality
+function applyCommentWorkflowBlocking() {
+  if (!window.workflowTracker) return
+  
+  const userCookie = getCookie()
+  if (!userCookie) return
+  
+  const activeSubmissions = window.workflowTracker.getActiveSubmissions()
+  const hasActiveSubmissions = activeSubmissions.length > 0
+  
+  if (hasActiveSubmissions) {
+    // Block new comment form
+    const commentForm = document.getElementById("commentForm")
+    const commentStatus = document.getElementById("commentStatus")
+    const commentSubmitBtn = commentForm.querySelector('button[type="submit"]')
+    
+    if (commentForm && commentSubmitBtn) {
+      commentSubmitBtn.disabled = true
+      commentStatus.textContent = "Please wait for your previous submission to complete before submitting a new comment."
+      commentStatus.className = "text-sm text-yellow-600"
+    }
+    
+    // Block edit comment form if open
+    const editCommentForm = document.getElementById("editCommentForm")
+    const editCommentStatus = document.getElementById("editCommentStatus")
+    const editSubmitBtn = editCommentForm.querySelector('button[type="submit"]')
+    
+    if (editCommentForm && editSubmitBtn) {
+      editSubmitBtn.disabled = true
+      editCommentStatus.innerHTML = '<div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">Please wait for your previous submission to complete before editing comments.</div>'
+      editCommentStatus.className = "mb-4"
+    }
+    
+    // Disable edit/delete buttons
+    const editBtns = document.querySelectorAll(".edit-comment-btn")
+    const deleteBtns = document.querySelectorAll(".delete-comment-btn")
+    
+    editBtns.forEach(btn => btn.disabled = true)
+    deleteBtns.forEach(btn => btn.disabled = true)
+  }
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   // Initialize comment functionality
   revealCommentActionsIfRequired()
   checkEditCommentFromURL()
+  applyCommentWorkflowBlocking()
+  
+  // Apply blocking when workflow tracker updates
+  if (window.workflowTracker) {
+    window.workflowTracker.onUpdate = applyCommentWorkflowBlocking
+  }
 })
