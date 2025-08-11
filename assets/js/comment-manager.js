@@ -1,3 +1,31 @@
+async function submitCommentForm(formData, imageElementId, operation) {
+  const imageInput = document.getElementById(imageElementId)
+  if (!imageInput.files || imageInput.files.length === 0 || imageInput.files[0].size === 0) {
+    formData.delete("image")
+  }
+
+  const response = await fetch(`${window.firebaseUrl}/submitComment`, {
+    method: "POST",
+    body: formData,
+  })
+
+  const result = await response.json()
+
+  if (result.success) {
+    if (window.workflowTracker && result.commitSha) {
+      window.workflowTracker.trackSubmission(
+        window.location.href,
+        "{{ page.slug }}",
+        operation,
+        data.commitSha,
+        Date.now()
+      )
+    }
+  }
+
+  return result
+}
+
 document.getElementById("commentForm").addEventListener("submit", async function (e) {
   e.preventDefault()
 
@@ -10,23 +38,14 @@ document.getElementById("commentForm").addEventListener("submit", async function
   statusDiv.textContent = "Submitting your comment..."
   statusDiv.className = "text-sm text-blue-600"
 
+  const formData = new FormData(e.target)
+
+  // Add user cookie (create one if user doesn't have one)
+  const userCookie = getOrSetUserCookie()
+  formData.append("userCookie", userCookie)
+
   try {
-    const formData = new FormData(e.target)
-    const imageInput = document.getElementById("image")
-    if (!imageInput.files || imageInput.files.length === 0 || imageInput.files[0].size === 0) {
-      formData.delete("image")
-    }
-
-    // Add user cookie (create one if user doesn't have one)
-    const userCookie = getOrSetUserCookie()
-    formData.append("userCookie", userCookie)
-
-    const response = await fetch(`${window.firebaseUrl}/submitComment`, {
-      method: "POST",
-      body: formData,
-    })
-
-    const result = await response.json()
+    const result = await submitCommentForm(formData, "image", "new_comment")
 
     if (result.success) {
       statusDiv.textContent = "Comment submitted successfully! It will appear after the site rebuilds."
@@ -59,6 +78,52 @@ function revealCommentActionsIfRequired() {
     }
   })
 }
+
+document.getElementById("editCommentForm").addEventListener("submit", async function (e) {
+  e.preventDefault()
+
+  const statusDiv = document.getElementById("editCommentStatus")
+  const submitBtn = e.target.querySelector('button[type="submit"]')
+  const originalBtnText = submitBtn.innerHTML
+
+  // Show loading state
+  submitBtn.innerHTML =
+    '<svg class="w-4 h-4 inline mr-1 animate-spin" fill="currentColor" viewBox="0 0 20 20"><path d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2H4z"></path></svg>Updating...'
+  submitBtn.disabled = true
+  statusDiv.className = "mb-4 hidden"
+
+  const formData = new FormData(e.target)
+
+  // Add user cookie
+  const userCookie = getCookie()
+  if (userCookie) {
+    formData.append("userCookie", userCookie)
+  }
+
+  try {
+    const data = await submitCommentForm(formData, "editCommentImage", "edit_comment")
+
+    if (data.success) {
+      statusDiv.innerHTML =
+        '<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">Comment updated successfully! The page will refresh shortly.</div>'
+      statusDiv.className = "mb-4"
+
+      setTimeout(() => {
+        window.location.reload()
+      }, 2000)
+    } else {
+      throw new Error(data.error || "Failed to update comment")
+    }
+  } catch (error) {
+    console.error("Error updating comment:", error)
+    statusDiv.innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">Error: ${error.message}</div>`
+    statusDiv.className = "mb-4"
+
+    // Restore button
+    submitBtn.innerHTML = originalBtnText
+    submitBtn.disabled = false
+  }
+})
 
 // Edit comment functionality
 function showEditCommentPopup(commentId, commentText, commentImage) {
@@ -180,66 +245,6 @@ document.getElementById("cancelEditComment").addEventListener("click", function 
 })
 
 // Edit comment form submission
-document.getElementById("editCommentForm").addEventListener("submit", async function (e) {
-  e.preventDefault()
-
-  const statusDiv = document.getElementById("editCommentStatus")
-  const submitBtn = e.target.querySelector('button[type="submit"]')
-  const originalBtnText = submitBtn.innerHTML
-
-  // Show loading state
-  submitBtn.innerHTML =
-    '<svg class="w-4 h-4 inline mr-1 animate-spin" fill="currentColor" viewBox="0 0 20 20"><path d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2H4z"></path></svg>Updating...'
-  submitBtn.disabled = true
-  statusDiv.className = "mb-4 hidden"
-
-  try {
-    const formData = new FormData(e.target)
-
-    // Add user cookie
-    const userCookie = getCookie()
-    if (userCookie) {
-      formData.append("userCookie", userCookie)
-    }
-
-    const response = await fetch(`${window.firebaseUrl}/submitComment`, {
-      method: "POST",
-      body: formData,
-    })
-
-    const data = await response.json()
-
-    if (data.success) {
-      if (window.workflowTracker && data.commitSha) {
-        window.workflowTracker.trackSubmission(
-          window.location.href,
-          "{{ page.slug }}",
-          "edit_comment",
-          data.commitSha,
-          Date.now()
-        )
-      }
-
-      statusDiv.innerHTML =
-        '<div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">Comment updated successfully! The page will refresh shortly.</div>'
-      statusDiv.className = "mb-4"
-
-      setTimeout(() => {
-        window.location.reload()
-      }, 2000)
-    } else {
-      throw new Error(data.error || "Failed to update comment")
-    }
-  } catch (error) {
-    console.error("Error updating comment:", error)
-    statusDiv.innerHTML = `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">Error: ${error.message}</div>`
-    statusDiv.className = "mb-4"
-
-    // Restore button
-    submitBtn.innerHTML = originalBtnText
-    submitBtn.disabled = false
-  }
-})
 
 // Check URL for direct edit comment access
 function checkEditCommentFromURL() {
