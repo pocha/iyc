@@ -61,7 +61,7 @@ function revealCommentActionsIfRequired() {
 }
 
 // Edit comment functionality
-function handleEditComment(commentId, commentText, commentImage) {
+function showEditCommentPopup(commentId, commentText, commentImage) {
   const modal = document.getElementById("editCommentModal")
   const commentIdInput = document.getElementById("editCommentId")
   const commentTextArea = document.getElementById("editCommentText")
@@ -151,7 +151,7 @@ document.addEventListener("click", function (e) {
     const postDate = btn.getAttribute("data-post-date")
     const commentText = btn.getAttribute("data-comment-text")
     const commentImage = btn.getAttribute("data-comment-image")
-    handleEditComment(commentId, commentText, commentImage)
+    showEditCommentPopup(commentId, commentText, commentImage)
   }
 
   if (e.target.closest(".delete-comment-btn")) {
@@ -254,7 +254,7 @@ function checkEditCommentFromURL() {
       if (editBtn && editBtn.closest(".comment-owner-actions").style.display !== "none") {
         const commentText = editBtn.getAttribute("data-comment-text")
         const commentImage = editBtn.getAttribute("data-comment-image")
-        handleEditComment(editCommentId, commentText, commentImage)
+        showEditCommentPopup(editCommentId, commentText, commentImage)
       }
     }
   }
