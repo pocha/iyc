@@ -17,7 +17,7 @@ async function submitCommentForm(formData, imageElementId, operation) {
         window.location.href,
         "{{ page.slug }}",
         operation,
-        data.commitSha,
+        result.commitSha,
         Date.now()
       )
     }
