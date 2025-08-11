@@ -47,7 +47,7 @@ function getCommentPaths(slug, date, commentId = null, imageFileName = null) /* 
   const now = new Date()
   const { postDirPath } = getPostPaths(slug, date)
 
-  const commentDirPath = `_data/comments/${slug}`
+  const commentDirPath = `_data/comments/${date}-${slug}`
   const timeStr = now.toISOString()
   const commentFileName = commentId || `comment-${timeStr.replace(/[:.]/g, "-")}`
   const commentPath = `${commentDirPath}/${commentFileName}.yml`
