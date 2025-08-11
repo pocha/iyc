@@ -109,7 +109,7 @@ document.getElementById("editCommentForm").addEventListener("submit", async func
       statusDiv.className = "mb-4"
 
       setTimeout(() => {
-        window.location.reload()
+        closeEditFormModal()
       }, 2000)
     } else {
       throw new Error(data.error || "Failed to update comment")
@@ -227,22 +227,18 @@ document.addEventListener("click", function (e) {
   }
 })
 
-// Modal close functionality
-document.getElementById("closeEditCommentModal").addEventListener("click", function () {
+function closeEditFormModal() {
   document.getElementById("editCommentModal").classList.add("hidden")
   // Remove URL parameter
   const url = new URL(window.location)
   url.searchParams.delete("editComment")
   window.history.pushState({}, "", url)
-})
+}
 
-document.getElementById("cancelEditComment").addEventListener("click", function () {
-  document.getElementById("editCommentModal").classList.add("hidden")
-  // Remove URL parameter
-  const url = new URL(window.location)
-  url.searchParams.delete("editComment")
-  window.history.pushState({}, "", url)
-})
+// Modal close functionality
+document.getElementById("closeEditCommentModal").addEventListener("click", closeEditFormModal)
+
+document.getElementById("cancelEditComment").addEventListener("click", closeEditFormModal)
 
 // Edit comment form submission
 
