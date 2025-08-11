@@ -8,6 +8,7 @@ const {
   GITHUB_BRANCH,
   parseMultipartData,
   createSingleCommit,
+  getCommentPaths,
 } = require("./library")
 
 exports.submitComment = functions.region("asia-south1").https.onRequest((req, res) => {
@@ -44,7 +45,7 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
         imageOnly: true,
       })
 
-      const { postSlug, comment, commentId, userCookie } = fields
+      const { postSlug, postDate, comment, commentId, userCookie } = fields
 
       // Validate required fields
       if (!postSlug || !comment || !userCookie) {
@@ -58,18 +59,13 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
       // Generate timestamp
       const now = new Date()
       const timestamp = now.toISOString()
-      const timeStr = now.toISOString()
 
       // Determine if this is edit or create mode
       const isEditMode = commentId && commentId.trim() !== ""
-
-      // Generate comment ID for new comments or use existing for edits
-      const finalCommentId = isEditMode ? commentId : `comment-${timeStr.replace(/[:.]/g, "-")}`
+      const { commentPath } = getCommentPaths(postSlug, postDate, commentId)
 
       // Create comment content in YAML format for Staticman structure
-      // Create comment content in YAML format for Staticman structure
-      let commentContent = `_id: ${finalCommentId}
-date: ${isEditMode ? timestamp : timestamp}
+      let commentContent = `date: ${timestamp}
 userCookie: ${userCookie}
 message: ${comment}`
 
@@ -82,25 +78,21 @@ message: ${comment}`
         const { filename, mimeType, buffer } = file
 
         if (mimeType && mimeType.startsWith("image/")) {
-          const imageFileName = `comment-${timeStr}-${filename}`
-          const imagePath = `_posts/${postSlug}/${imageFileName}`
+          const { commentImagePath } = getCommentPaths(postSlug, postDate, null, filename)
 
           // Add image reference to comment content
-          const imageUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/_posts/${postSlug}/${imageFileName}?raw=true`
+          const imageUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${commentImagePath}?raw=true`
           commentContent += `
 image: ${imageUrl}`
 
           // Add image file to the commit
           filesToCreate.push({
-            path: imagePath,
+            path: commentImagePath,
             content: buffer.toString("base64"),
             encoding: "base64",
           })
         }
       }
-
-      // Create comment file in the Staticman structure
-      const commentPath = `_data/comments/${postSlug}/${finalCommentId}.yml`
 
       // Add comment file to the commit
       filesToCreate.push({
@@ -111,7 +103,7 @@ image: ${imageUrl}`
 
       // Use the generic single commit function
       const commitMessage = isEditMode
-        ? `Edit comment ${finalCommentId} in post: ${postSlug}`
+        ? `Edit comment ${commentId} in post: ${postSlug}`
         : `Add comment to post: ${postSlug}`
 
       const result = await createSingleCommit(filesToCreate, commitMessage)

@@ -21,7 +21,7 @@ defaults:
       path: ''
       type: 'posts'
     values:
-      permalink: /post/:title/
+      permalink: /posts/:title-:year-:month-:day
       layout: 'post'
   - scope:
       path: ''

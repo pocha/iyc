@@ -43,6 +43,21 @@ function getPostPaths(slug, date, imageFileName = null) {
   return paths
 }
 
+function getCommentPaths(slug, date, commentId = null, imageFileName = null) /* */ {
+  const { postDirPath } = getPostPaths(slug, date)
+
+  const commentDirPath = `_data/comments/${postSlug}`
+  const timeStr = now.toISOString()
+  const commentFileName = commentId || `comment-${timeStr.replace(/[:.]/g, "-")}`
+  const commentPath = `${commentDirPath}/${commentFileName}.yml`
+
+  return {
+    commentDirPath,
+    commentPath,
+    commentImagePath: imageFileName ? `${postDirPath}/${imageFileName}` : null,
+  }
+}
+
 // Shared function to parse multipart form data using Busboy
 const parseMultipartData = (req, options = {}) => {
   return new Promise((resolve, reject) => {
@@ -460,4 +475,6 @@ module.exports = {
   getOrCreateUserCookie,
   createNewPost,
   editPost,
+  getPostPaths,
+  getCommentPaths,
 }

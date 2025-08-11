@@ -8,6 +8,8 @@ const {
   GITHUB_REPO,
   GITHUB_BRANCH,
   createSingleCommit,
+  getPostPaths,
+  getCommentPaths,
 } = require("./library")
 
 exports.deleteContent = functions.region("asia-south1").https.onRequest((req, res) => {
@@ -37,7 +39,7 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
         return
       }
 
-      const { postSlug, commentId, userCookie } = req.body
+      const { postSlug, postDate, commentId, userCookie } = req.body
 
       // Validate required fields
       if (!postSlug || !userCookie) {
@@ -50,12 +52,17 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
 
       // Check if userCookie matches (common check for both operations)
       const isCommentDeletion = commentId && commentId.trim() !== ""
-      
+
+      let filePath = null
+      if (isCommentDeletion) {
+        const { commentPath } = getCommentPaths(postSlug, postDate)
+        filePath = commentPath
+      } else {
+        const { blogFilePath } = getPostPaths(postSlug, postDate)
+        filePath = blogFilePath
+      }
       // Get content and verify ownership
-      const parsedContent = await getContent(
-        isCommentDeletion ? `_data/comments/${postSlug}/${commentId}.yml` : `_posts/${postSlug}/index.md`,
-        isCommentDeletion
-      )
+      const parsedContent = await getContent(filePath)
 
       if (!parsedContent) {
         return // Error response already sent in getContent
@@ -79,19 +86,22 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
 
         // Add comment file to deletion list
         filesToDelete.push({
-          path: `_data/comments/${postSlug}/${commentId}.yml`,
+          path: commentPath,
           content: null,
           encoding: null, // This marks the file for deletion
         })
-        
-        await addImageToDelete(parsedContent.image, postSlug, filesToDelete)
+
+        await addImageToDelete(parsedContent.image, postSlug, postDate, filesToDelete)
         commitMessage = `Delete comment ${commentId} from post: ${postSlug}`
       } else {
         // Post deletion logic
         console.log(`Attempting to delete post: ${postSlug}`)
 
-        await addFilesFromDirectoryToDelete(`_posts/${postSlug}`, filesToDelete)
-        await addFilesFromDirectoryToDelete(`_data/comments/${postSlug}`, filesToDelete)
+        const { postDirPath } = getPostPaths(postSlug, postDate)
+        const { commentDirPath } = getCommentPaths(postSlug, postDate)
+
+        await addFilesFromDirectoryToDelete(postDirPath, filesToDelete)
+        await addFilesFromDirectoryToDelete(commentDirPath, filesToDelete)
 
         console.log(`Files to delete: ${filesToDelete.map((f) => f.path).join(", ")}`)
 
@@ -130,7 +140,7 @@ async function getContent(path, isCommentDeletion) {
     })
 
     const contentToVerify = Buffer.from(contentResponse.data.content, "base64").toString("utf-8")
-    
+
     if (!isCommentDeletion) {
       // For posts, extract frontmatter
       const frontmatterMatch = contentToVerify.match(/^---\n([\s\S]*?)\n---/)
@@ -177,17 +187,18 @@ async function addFilesFromDirectoryToDelete(path, filesToDelete) {
   }
 }
 
-async function addImageToDelete(image, postSlug, filesToDelete) {
+async function addImageToDelete(imageUrl, postSlug, filesToDelete) {
   // Check if comment has an associated image using the parsed YAML
-  if (image) {
+  if (imageUrl) {
     // Extract filename from the GitHub URL
-    const urlMatch = image.match(
+    const urlMatch = imageUrl.match(
       /https:\/\/github\.com\/[^\/]+\/[^\/]+\/blob\/[^\/]+\/_posts\/[^\/]+\/(.+)\?raw=true/
     )
     if (urlMatch) {
       const imageFileName = urlMatch[1]
+      const { imagePath } = getPostPaths(postSlug, postDate, imageFileName)
       filesToDelete.push({
-        path: `_posts/${postSlug}/${imageFileName}`,
+        path: imagePath,
         content: null,
         encoding: null, // This marks the file for deletion
       })
