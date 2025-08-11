@@ -17,7 +17,7 @@ async function submitCommentForm(formData, imageElementId, operation) {
       if (operation === "edit_comment") {
         submissionId = document.getElementById("editCommentId").value
       }
-      
+
       window.workflowTracker.trackSubmission(
         operation === "edit_comment" ? window.location.href.split("?")[0] : window.location.href,
         submissionId,
@@ -178,7 +178,7 @@ function handleDeleteComment(commentId, postDate) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      postSlug: operation === "edit_comment" ? window.location.href.split("?")[0] : window.location.href,
+      postSlug: window.postSlug,
       postDate: postDate,
       commentId: commentId,
       userCookie: getCookie(),
@@ -189,7 +189,7 @@ function handleDeleteComment(commentId, postDate) {
       if (data.success) {
         if (window.workflowTracker && data.commitSha) {
           window.workflowTracker.trackSubmission(
-            operation === "edit_comment" ? window.location.href.split("?")[0] : window.location.href,
+            window.location.href,
             commentId,
             "delete_comment",
             data.commitSha,
@@ -266,42 +266,44 @@ function checkEditCommentFromURL() {
 // Workflow blocking functionality
 function applyCommentWorkflowBlocking() {
   if (!window.workflowTracker) return
-  
+
   const userCookie = getCookie()
   if (!userCookie) return
-  
+
   const activeSubmissions = window.workflowTracker.getActiveSubmissions()
   const hasActiveSubmissions = activeSubmissions.length > 0
-  
+
   if (hasActiveSubmissions) {
     // Block new comment form
     const commentForm = document.getElementById("commentForm")
     const commentStatus = document.getElementById("commentStatus")
     const commentSubmitBtn = commentForm.querySelector('button[type="submit"]')
-    
+
     if (commentForm && commentSubmitBtn) {
       commentSubmitBtn.disabled = true
-      commentStatus.textContent = "Please wait for your previous submission to complete before submitting a new comment."
+      commentStatus.textContent =
+        "Please wait for your previous submission to complete before submitting a new comment."
       commentStatus.className = "text-sm text-yellow-600"
     }
-    
+
     // Block edit comment form if open
     const editCommentForm = document.getElementById("editCommentForm")
     const editCommentStatus = document.getElementById("editCommentStatus")
     const editSubmitBtn = editCommentForm.querySelector('button[type="submit"]')
-    
+
     if (editCommentForm && editSubmitBtn) {
       editSubmitBtn.disabled = true
-      editCommentStatus.innerHTML = '<div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">Please wait for your previous submission to complete before editing comments.</div>'
+      editCommentStatus.innerHTML =
+        '<div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">Please wait for your previous submission to complete before editing comments.</div>'
       editCommentStatus.className = "mb-4"
     }
-    
+
     // Disable edit/delete buttons
     const editBtns = document.querySelectorAll(".edit-comment-btn")
     const deleteBtns = document.querySelectorAll(".delete-comment-btn")
-    
-    editBtns.forEach(btn => btn.disabled = true)
-    deleteBtns.forEach(btn => btn.disabled = true)
+
+    editBtns.forEach((btn) => (btn.disabled = true))
+    deleteBtns.forEach((btn) => (btn.disabled = true))
   }
 }
 
@@ -310,7 +312,7 @@ document.addEventListener("DOMContentLoaded", function () {
   revealCommentActionsIfRequired()
   checkEditCommentFromURL()
   applyCommentWorkflowBlocking()
-  
+
   // Apply blocking when workflow tracker updates
   if (window.workflowTracker) {
     window.workflowTracker.onUpdate = applyCommentWorkflowBlocking
