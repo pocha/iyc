@@ -55,8 +55,10 @@ class WorkflowTracker {
         if (operation === "new_post") this.handleNewPostPage()
         if (operation === "edit_post") this.handleEditPage("edit")
         if (operation === "delete_post") this.handlePostViewPage(slug, "delete")
-        if (operation === "new_comment" || operation === "edit_comment" || operation === "delete_comment") {
+        if (operation === "new_comment") {
           this.handleCommentForm()
+        }
+        if (operation === "edit_comment" || operation === "delete_comment") {
           this.handleEditDeleteButtons(submissionId)
         }
       } else if (currentUrl.includes(slug)) {
