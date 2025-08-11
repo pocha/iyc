@@ -19,7 +19,7 @@ async function submitCommentForm(formData, imageElementId, operation) {
       }
       
       window.workflowTracker.trackSubmission(
-        operation === "edit_comment" ? `/posts/${window.postSlug}` : window.location.href,
+        operation === "edit_comment" ? `${window.location.origin}/posts/${window.postSlug}` : window.location.href,
         submissionId,
         operation,
         result.commitSha,
@@ -178,7 +178,7 @@ function handleDeleteComment(commentId, postDate) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      postSlug: operation === "edit_comment" ? `/posts/${window.postSlug}` : window.location.href,
+      postSlug: operation === "edit_comment" ? `${window.location.origin}/posts/${window.postSlug}` : window.location.href,
       postDate: postDate,
       commentId: commentId,
       userCookie: getCookie(),
@@ -189,7 +189,7 @@ function handleDeleteComment(commentId, postDate) {
       if (data.success) {
         if (window.workflowTracker && data.commitSha) {
           window.workflowTracker.trackSubmission(
-            operation === "edit_comment" ? `/posts/${window.postSlug}` : window.location.href,
+            operation === "edit_comment" ? `${window.location.origin}/posts/${window.postSlug}` : window.location.href,
             commentId,
             "delete_comment",
             data.commitSha,
