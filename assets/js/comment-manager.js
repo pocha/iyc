@@ -109,7 +109,9 @@ function handleDeleteComment(commentId) {
     },
     body: JSON.stringify({
       postSlug: "{{ page.slug }}",
+      postDate: postDate,
       commentId: commentId,
+      userCookie: getCookie(),
     }),
   })
     .then((response) => response.json())
@@ -146,6 +148,7 @@ document.addEventListener("click", function (e) {
   if (e.target.closest(".edit-comment-btn")) {
     const btn = e.target.closest(".edit-comment-btn")
     const commentId = btn.getAttribute("data-comment-id")
+    const postDate = btn.getAttribute("data-post-date")
     const commentText = btn.getAttribute("data-comment-text")
     const commentImage = btn.getAttribute("data-comment-image")
     handleEditComment(commentId, commentText, commentImage)
@@ -154,6 +157,7 @@ document.addEventListener("click", function (e) {
   if (e.target.closest(".delete-comment-btn")) {
     const btn = e.target.closest(".delete-comment-btn")
     const commentId = btn.getAttribute("data-comment-id")
+    const postDate = btn.getAttribute("data-post-date")
     handleDeleteComment(commentId)
   }
 })
