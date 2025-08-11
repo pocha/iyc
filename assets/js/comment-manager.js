@@ -173,7 +173,7 @@ function handleDeleteComment(commentId, postDate) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      postSlug: "{{ page.slug }}",
+      postSlug: window.postSlug,
       postDate: postDate,
       commentId: commentId,
       userCookie: getCookie(),
