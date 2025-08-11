@@ -76,61 +76,61 @@ layout: default
     <!-- Comments Section -->
     <div class="mt-8 pt-6 border-t border-gray-200">
       <h3 class="text-xl font-bold text-gray-900 mb-4">Comments</h3>
-      {% if comments.size > 0 %} {% for comment_hash in comments %} {% assign comment = comment_hash[1] %} {% assign
-      comment_id = comment_hash[0] %}
-      <div class="bg-gray-50 rounded-lg p-4 border border-gray-200" data-comment-id="{{ comment_id }}" data-post-date="{{ page.date | date: "%Y-%m-%d" }}">
-        <div class="flex items-center justify-between mb-2">
-          <span class="font-semibold text-gray-900">{{ comment.name | default: "Anonymous" }}</span>
-          <div class="flex items-center space-x-2">
-            <span class="text-sm text-gray-500">{{ comment.date | date: "%B %d, %Y at %I:%M %p" }}</span>
-            <!-- Comment Owner Actions -->
-            <div class="comment-owner-actions" style="display: none" data-user-cookie="{{ comment.userCookie }}">
-              <button
-                class="edit-comment-btn bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-all"
-                data-comment-id="{{ comment_id }}" data-post-date="{{ page.date | date: "%Y-%m-%d" }}"
-                data-comment-text="{{ comment.message | escape }}"
-                data-comment-image="{{ comment.image }}"
-              >
-                <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
-                  ></path>
-                </svg>
-                Edit
-              </button>
-              <button
-                class="delete-comment-btn bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700 transition-all"
-                data-comment-id="{{ comment_id }}" data-post-date="{{ page.date | date: "%Y-%m-%d" }}"
-              >
-                <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clip-rule="evenodd"></path>
-                  <path
-                    fill-rule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1.707-6.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                    clip-rule="evenodd"
-                  ></path>
-                </svg>
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-        <div class="text-gray-700">
-          {{ comment.message }} {% if comment.image %}
-          <div class="mt-3">
-            <img
-              src="{{ comment.image }}"
-              alt="Comment attachment"
-              class="max-w-full h-auto rounded-lg border border-gray-300 shadow-sm cursor-pointer"
-              onclick="openImageModal(this.src)"
-              style="max-height: 300px"
-            />
-          </div>
-          {% endif %}
-        </div>
-      </div>
-      {% endfor %} {% else %}
-      <p class="text-gray-500 italic">No comments yet. Be the first to comment.</p>
+	  {% assign post_date_slug = page.date | date: "%Y-%m-%d" | append: "-" | append: page.slug %}
+	  {% assign comments = site.data.comments[post_date_slug] %}
+      {% if comments.size > 0 %} 
+	  	{% for comment_hash in comments %} 
+	  		{% assign comment = comment_hash[1] %} 
+			{% assign comment_id = comment_hash[0] %}
+			<div class="bg-gray-50 rounded-lg p-4 border border-gray-200" data-comment-id="{{ comment_id }}" data-post-date="{{ page.date | date: "%Y-%m-%d" }}">
+				<div class="flex items-center justify-between mb-2">
+				<span class="font-semibold text-gray-900">{{ comment.date | date: "%B %d, %Y at %I:%M %p" }}</span>
+				<div class="flex items-center space-x-2">
+					<!-- Comment Owner Actions -->
+					<div class="comment-owner-actions" style="display: none" data-user-cookie="{{ comment.userCookie }}">
+					<button
+						class="edit-comment-btn bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-all"
+						data-comment-id="{{ comment_id }}" data-post-date="{{ page.date | date: "%Y-%m-%d" }}"
+						data-comment-text="{{ comment.message | escape }}"
+						data-comment-image="{{ comment.image }}">
+						<svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+						<path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+						></path>
+						</svg>
+						Edit
+					</button>
+					<button
+						class="delete-comment-btn bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700 transition-all"
+						data-comment-id="{{ comment_id }}" data-post-date="{{ page.date | date: "%Y-%m-%d" }}">
+						<svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+						<path fill-rule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clip-rule="evenodd"></path>
+						<path
+							fill-rule="evenodd"
+							d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1.707-6.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+							clip-rule="evenodd"></path>
+						</svg>
+						Delete
+					</button>
+					</div>
+				</div>
+				</div>
+				<div class="text-gray-700">
+				{{ comment.message }} {% if comment.image %}
+				<div class="mt-3">
+					<img
+					src="{{ comment.image }}"
+					alt="Comment attachment"
+					class="max-w-full h-auto rounded-lg border border-gray-300 shadow-sm cursor-pointer"
+					onclick="openImageModal(this.src)"
+					style="max-height: 300px"
+					/>
+				</div>
+				{% endif %}
+				</div>
+			</div>
+      		{% endfor %} 
+	  {% else %}
+      	<p class="text-gray-500 italic">No comments yet. Be the first to comment.</p>
       {% endif %}
     </div>
 
