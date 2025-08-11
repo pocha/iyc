@@ -55,6 +55,10 @@ class WorkflowTracker {
         if (operation === "new_post") this.handleNewPostPage()
         if (operation === "edit_post") this.handleEditPage("edit")
         if (operation === "delete_post") this.handlePostViewPage(slug, "delete")
+        if (operation === "new_comment" || operation === "edit_comment" || operation === "delete_comment") {
+          this.handleCommentForm()
+          this.handleEditDeleteButtons()
+        }
       } else if (currentUrl.includes(slug)) {
         if (isEditPage) {
           // on edit page of a post getting deleted
@@ -132,6 +136,38 @@ class WorkflowTracker {
       link.style.opacity = "0.5"
       link.style.pointerEvents = "none"
       link.style.cursor = "not-allowed"
+    })
+  }
+
+  // Handle comment form restrictions
+  handleCommentForm() {
+    const commentForm = document.getElementById("commentForm")
+    const commentSubmitButton = document.getElementById("commentSubmitBtn")
+
+    this.blockForm(
+      commentForm,
+      commentSubmitButton,
+      "Comment operation is in progress...",
+      "Submit Comment",
+      "Processing..."
+    )
+  }
+
+  // Handle edit/delete buttons for comments
+  handleEditDeleteButtons() {
+    const editButtons = document.querySelectorAll(".edit-comment-btn")
+    const deleteButtons = document.querySelectorAll(".delete-comment-btn")
+
+    editButtons.forEach((button) => {
+      button.disabled = true
+      button.style.opacity = "0.5"
+      button.style.cursor = "not-allowed"
+    })
+
+    deleteButtons.forEach((button) => {
+      button.disabled = true
+      button.style.opacity = "0.5"
+      button.style.cursor = "not-allowed"
     })
   }
 
