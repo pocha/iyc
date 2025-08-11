@@ -269,7 +269,9 @@ layout: default
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            postSlug: fullPostSlug,
+            postSlug: postSlug,
+            postDate: postDate,
+            userCookie: getCookie()
           }),
         })
           .then((response) => response.json())
