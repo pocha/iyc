@@ -155,7 +155,7 @@ function showEditCommentPopup(commentId, commentText, commentImage) {
 }
 
 // Delete comment functionality
-function handleDeleteComment(commentId) {
+function handleDeleteComment(commentId, postDate) {
   if (!confirm("Are you sure you want to delete this comment? This action cannot be undone.")) {
     return
   }
@@ -223,7 +223,7 @@ document.addEventListener("click", function (e) {
     const btn = e.target.closest(".delete-comment-btn")
     const commentId = btn.getAttribute("data-comment-id")
     const postDate = btn.getAttribute("data-post-date")
-    handleDeleteComment(commentId)
+    handleDeleteComment(commentId, postDate)
   }
 })
 
