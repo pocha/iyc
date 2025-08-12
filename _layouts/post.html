@@ -84,7 +84,7 @@ layout: default
 			{% assign comment_id = comment_hash[0] %}
 			<div class="bg-gray-50 rounded-lg p-4 border border-gray-200" data-comment-id="{{ comment_id }}" data-post-date="{{ page.date | date: "%Y-%m-%d" }}">
 				<div class="flex items-center justify-between mb-2">
-				<span class="font-semibold text-gray-900">{{ comment.date | date: "%B %d, %Y at %I:%M %p" }}</span>
+				<span class="text-xs text-gray-400">{{ comment.date | date: "%B %d, %Y at %I:%M %p" }}</span>
 				<div class="flex items-center space-x-2">
 					<!-- Comment Owner Actions -->
 					<div class="comment-owner-actions" style="display: none" data-user-cookie="{{ comment.userCookie }}">
