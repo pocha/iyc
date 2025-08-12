@@ -43,6 +43,33 @@ function getPostPaths(slug, date, imageFileName = null) {
   return paths
 }
 
+function getCommentPaths(slug, date, commentId = null, imageFileName = null) /* */ {
+  const now = new Date()
+  const { postDirPath } = getPostPaths(slug, date)
+
+  const commentDirPath = `_data/comments/${date}-${slug}`
+  const timeStr = now
+    .toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    })
+    .replace(/[/,: ]/g, "-")
+  const commentFileName = commentId || `comment-${timeStr}`
+  const commentPath = `${commentDirPath}/${commentFileName}.yml`
+
+  return {
+    commentDirPath,
+    commentPath,
+    commentImagePath: imageFileName ? `${postDirPath}/${imageFileName}` : null,
+  }
+}
+
 // Shared function to parse multipart form data using Busboy
 const parseMultipartData = (req, options = {}) => {
   return new Promise((resolve, reject) => {
@@ -272,7 +299,7 @@ title: "${title}"
 date: ${postDate}
 author: Anonymous
 slug: ${slug}
-user_cookie: ${userCookie || "anonymous"}
+user_cookie: ${userCookie}
 ---
 
 ${description}
@@ -311,18 +338,7 @@ ${description}
     })
 
     // Create single commit with all files
-    const result = await createSingleCommit(filesToProcess, `Create new blog post: ${title}`)
-
-    // Extract date components for URL
-    const dateObj = new Date(postDate)
-    return {
-      success: true,
-      postUrl: `http://20.42.15.153:4001/iyc/${dateObj.getFullYear()}/${String(dateObj.getMonth() + 1).padStart(
-        2,
-        "0"
-      )}/${String(dateObj.getDate()).padStart(2, "0")}/${slug}.html`,
-      githubUrl: result.githubUrl,
-    }
+    return await createSingleCommit(filesToProcess, `Create new blog post: ${title}`)
   } catch (error) {
     console.error("Error creating new post:", error)
     throw error
@@ -450,18 +466,7 @@ ${description}
     })
 
     // Create single commit with all updated/new files
-    const result = await createSingleCommit(filesToProcess, `Update blog post: ${title}`)
-
-    // Extract date components for URL
-    const dateObj = new Date(date)
-    return {
-      success: true,
-      postUrl: `http://20.42.15.153:4001/iyc/${dateObj.getFullYear()}/${String(dateObj.getMonth() + 1).padStart(
-        2,
-        "0"
-      )}/${String(dateObj.getDate()).padStart(2, "0")}/${slug}.html`,
-      githubUrl: result.githubUrl,
-    }
+    return await createSingleCommit(filesToProcess, `Update blog post: ${title}`)
   } catch (error) {
     console.error("Error editing post:", error)
     throw error
@@ -482,4 +487,6 @@ module.exports = {
   getOrCreateUserCookie,
   createNewPost,
   editPost,
+  getPostPaths,
+  getCommentPaths,
 }

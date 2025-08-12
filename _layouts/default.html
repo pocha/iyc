@@ -69,6 +69,28 @@
       </div>
     </header>
 
+    <div
+      id="notification"
+      class="hidden p-2 bg-orange-50 border-2 border-orange-400 rounded-xl text-center"
+      style="
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        max-width: 800px;
+        min-width: 400px;
+        width: 80%;
+      "
+    >
+      <p class="text-orange-600 text-sm font-semibold" id="notificationTitle">
+        Backend is yet to start processing ${operation} operation
+      </p>
+      <p class="text-orange-400 text-xs" id="notificationDescription">
+        Refresh the page after ${new Date(timestamp + 30000).toLocaleTimeString()} for an update
+      </p>
+    </div>
+
     <!-- Main Content -->
     <main class="container mx-auto px-6 py-8">{{ content }}</main>
 
@@ -78,5 +100,11 @@
         <p>&copy; 2025 {{ site.title }}. Built using <a href="https://nonbios.ai">nonbios.ai</a></p>
       </div>
     </footer>
+    <!-- Workflow Tracker Script -->
+    <script src="{{ site.baseurl }}/assets/js/workflow-tracker.js"></script>
+    <script>
+      window.firebaseUrl = "{{ site.firebase_url }}"
+      window.baseurl = "{{ site.baseurl }}"
+    </script>
   </body>
 </html>
