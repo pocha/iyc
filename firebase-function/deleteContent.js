@@ -62,7 +62,7 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
         filePath = blogFilePath
       }
       // Get content and verify ownership
-      const parsedContent = await getContent(filePath)
+      const parsedContent = await getContent(filePath, isCommentDeletion)
 
       if (!parsedContent) {
         return // Error response already sent in getContent
