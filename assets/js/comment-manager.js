@@ -198,9 +198,8 @@ function handleDeleteComment(commentId, postDate) {
           )
         }
 
-        // Remove comment from DOM
-        commentElement.remove()
         alert("Comment deleted successfully!")
+        window.location.reload()
       } else {
         throw new Error(data.error || "Failed to delete comment")
       }

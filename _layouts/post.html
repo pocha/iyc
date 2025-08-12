@@ -289,6 +289,7 @@ layout: default
               }
 
               alert("Post deleted successfully!")
+			  window.location.reload()
             } else {
               throw new Error(data.error || "Failed to delete post")
             }
