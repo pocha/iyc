@@ -259,7 +259,9 @@ class WorkflowTracker {
         try {
           const workflowStatus = await this.checkWorkflowStatus(submission.commitSha)
           if (["completed", "cancelled", "timed_out"].includes(workflowStatus.status)) {
-            console.log(`Workflow for commit ${submission.commitSha} completed/timed out, removing from tracking`)
+            console.log(
+              `Workflow for commit ${submission.commitSha} status changed to ${workflowStatus.status}, removing from tracking`
+            )
 
             const clonedObject = JSON.parse(JSON.stringify(this.activeSubmissions[url]))
             submissionsRemoved.push(clonedObject)
