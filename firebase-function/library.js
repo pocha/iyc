@@ -66,7 +66,7 @@ function getCommentPaths(slug, date, commentId = null, imageFileName = null) /* 
   return {
     commentDirPath,
     commentPath,
-    commentImagePath: imageFileName ? `${postDirPath}/${imageFileName}` : null,
+    commentImagePath: imageFileName ? `${postDirPath}/comment-${imageFileName}` : null, // the "comment-" prefix ensures filtering images for inclusion in the post
   }
 }
 
