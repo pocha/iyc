@@ -169,7 +169,7 @@ test.describe("Forum End-to-End Tests", () => {
     await saveButton.click()
 
     // Wait for edit to complete and verify
-    await page.waitForSelector(".text-green-600", { timeout: firebaseProcessTime })
+    await page.waitForSelector(".text-green-700", { timeout: firebaseProcessTime })
     await doGitPullAndReloadPage(page)
     await expect(page.locator("#commentsContainer > div").first()).toContainText(
       "This is an edited test comment with image"
