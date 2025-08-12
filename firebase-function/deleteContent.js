@@ -68,7 +68,7 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
         return // Error response already sent in getContent
       }
 
-      if (!parsedContent.userCookie || parsedContent.userCookie !== userCookie) {
+      if (!parsedContent.user_cookie || parsedContent.user_cookie !== userCookie) {
         res.status(403).json({
           success: false,
           error: isCommentDeletion ? "You can only delete your own comments." : "You can only delete your own posts.",

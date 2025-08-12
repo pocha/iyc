@@ -66,7 +66,7 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
 
       // Create comment content in YAML format for Staticman structure
       let commentContent = `date: ${timestamp}
-userCookie: ${userCookie}
+user_cookie: ${userCookie}
 message: ${comment}`
 
       // Prepare files for single commit

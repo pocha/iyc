@@ -48,7 +48,18 @@ function getCommentPaths(slug, date, commentId = null, imageFileName = null) /* 
   const { postDirPath } = getPostPaths(slug, date)
 
   const commentDirPath = `_data/comments/${date}-${slug}`
-  const timeStr = now.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).replace(/[/,: ]/g, "-")
+  const timeStr = now
+    .toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    })
+    .replace(/[/,: ]/g, "-")
   const commentFileName = commentId || `comment-${timeStr}`
   const commentPath = `${commentDirPath}/${commentFileName}.yml`
 
@@ -288,7 +299,7 @@ title: "${title}"
 date: ${postDate}
 author: Anonymous
 slug: ${slug}
-user_cookie: ${userCookie || "anonymous"}
+user_cookie: ${userCookie}
 ---
 
 ${description}
