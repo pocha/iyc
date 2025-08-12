@@ -85,7 +85,7 @@ test.describe("Forum End-to-End Tests", () => {
     await page.waitForSelector(".text-green-600", { timeout: firebaseProcessTime })
 
     // Wait for comment to appear
-    await doGitPullAndReloadPage()
+    await doGitPullAndReloadPage(page)
 
     // check comment text & image
     await expect(page.locator("text=This is a test comment with an image.")).toBeVisible()
@@ -168,7 +168,7 @@ test.describe("Forum End-to-End Tests", () => {
 
     // Wait for edit to complete and verify
     await page.waitForSelector(".text-green-600", { timeout: firebaseProcessTime })
-    await doGitPullAndReloadPage()
+    await doGitPullAndReloadPage(page)
     await expect(page.locator(".comment-item").first()).toContainText("This is an edited test comment with image")
 
     console.log("✓ Comment edit functionality working")
@@ -194,7 +194,7 @@ test.describe("Forum End-to-End Tests", () => {
     // Wait for deletion to complete
     await page.waitForTimeout(1000) // wait for dialog handler
 
-    await doGitPullAndReloadPage()
+    await doGitPullAndReloadPage(page)
 
     // Verify comment is deleted (no comment items should exist)
     const commentCount = await page.locator(".comment-item").count()
