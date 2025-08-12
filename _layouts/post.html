@@ -74,7 +74,7 @@ layout: default
     <div class="prose prose-lg max-w-none">{{ content }}</div>
 
     <!-- Comments Section -->
-    <div class="mt-8 p-6 border-t border-gray-200">
+    <div class="mt-8 p-6 border-t border-gray-200" id="commentsContainer">
       <h3 class="text-xl font-bold text-gray-900 mb-4">Comments</h3>
 	  {% assign post_date_slug = page.date | date: "%Y-%m-%d" | append: "-" | append: page.slug %}
 	  {% assign comments = site.data.comments[post_date_slug] %}
