@@ -69,7 +69,7 @@ test.describe("Forum End-to-End Tests", () => {
     // Add a comment with image
     await page.fill('textarea[name="comment"]', "This is a test comment with an image.")
 
-    const commentFileInput = page.locator('input[type="file"]').last()
+    const commentFileInput = page.locator("#image")
     await commentFileInput.setInputFiles(["tests/test-comment-image.jpg"])
 
     // Wait for comment image to be uploaded
