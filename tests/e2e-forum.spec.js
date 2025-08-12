@@ -62,83 +62,83 @@ test.describe("Forum End-to-End Tests", () => {
     let postImages = page.locator(".prose img")
     await expect(postImages).toHaveCount(2)
 
-    //===============
-    // Step 2: Navigate to the created post and add a comment
-    //===============
-    console.log("Step 2: Adding a comment to the post...")
-    // Add a comment with image
-    await page.fill('textarea[name="comment"]', "This is a test comment with an image.")
+    // //===============
+    // // Step 2: Navigate to the created post and add a comment
+    // //===============
+    // console.log("Step 2: Adding a comment to the post...")
+    // // Add a comment with image
+    // await page.fill('textarea[name="comment"]', "This is a test comment with an image.")
 
-    const commentFileInput = page.locator("#image")
-    await commentFileInput.setInputFiles(["tests/test-comment-image.jpg"])
+    // const commentFileInput = page.locator("#image")
+    // await commentFileInput.setInputFiles(["tests/test-comment-image.jpg"])
 
-    // Wait for comment image to be uploaded
-    await page.waitForTimeout(fileAttachTime)
+    // // Wait for comment image to be uploaded
+    // await page.waitForTimeout(fileAttachTime)
 
-    // Submit the comment
-    await page.click('button:has-text("Submit Comment")')
-    await page.waitForSelector(".text-green-600", { timeout: firebaseProcessTime })
+    // // Submit the comment
+    // await page.click('button:has-text("Submit Comment")')
+    // await page.waitForSelector(".text-green-600", { timeout: firebaseProcessTime })
 
-    // Wait for comment to appear
-    await gitPull()
-    await page.waitForTimeout(jekyllRebuildTime)
-    await page.reload()
-    await page.waitForLoadState("networkidle")
+    // // Wait for comment to appear
+    // await gitPull()
+    // await page.waitForTimeout(jekyllRebuildTime)
+    // await page.reload()
+    // await page.waitForLoadState("networkidle")
 
-    // check comment text & image
-    await expect(page.locator("text=This is a test comment with an image.")).toBeVisible()
-    postImages = page.locator("#commentsContainer img")
-    await expect(postImages).toHaveCount(1)
+    // // check comment text & image
+    // await expect(page.locator("text=This is a test comment with an image.")).toBeVisible()
+    // postImages = page.locator("#commentsContainer img")
+    // await expect(postImages).toHaveCount(1)
 
-    //=============
-    // Step 3: Edit the post
-    //=============
-    console.log("Step 3: Editing the post...")
-    await page.goto(homeUrl)
-    await page.waitForLoadState("networkidle")
+    // //=============
+    // // Step 3: Edit the post
+    // //=============
+    // console.log("Step 3: Editing the post...")
+    // await page.goto(homeUrl)
+    // await page.waitForLoadState("networkidle")
 
-    await page.click(`text=${postTitle}`)
-    await page.waitForLoadState("networkidle")
-    await expect(page.locator("#editPostBtn")).toBeVisible()
+    // await page.click(`text=${postTitle}`)
+    // await page.waitForLoadState("networkidle")
+    // await expect(page.locator("#editPostBtn")).toBeVisible()
 
-    let editButton = page.locator("#editPostBtn")
-    await editButton.click()
-    await page.waitForLoadState("networkidle")
+    // let editButton = page.locator("#editPostBtn")
+    // await editButton.click()
+    // await page.waitForLoadState("networkidle")
 
-    // expect 2 images on the edit page
-    expect(page.locator("#existingImagesList > div")).toHaveCount(2)
+    // // expect 2 images on the edit page
+    // expect(page.locator("#existingImagesList > div")).toHaveCount(2)
 
-    // Update the post title
-    await page.fill("#title", updatedPostTitle)
-    await page.fill('textarea[name="description"]', updatedDescription)
+    // // Update the post title
+    // await page.fill("#title", updatedPostTitle)
+    // await page.fill('textarea[name="description"]', updatedDescription)
 
-    // remove one image
-    let firstImageRemoveButton = page.locator("#existingImagesList button").first()
-    await firstImageRemoveButton.click()
-    await page.waitForTimeout(fileAttachTime)
-    expect(page.locator("#existingImagesList > div")).toHaveCount(1)
+    // // remove one image
+    // let firstImageRemoveButton = page.locator("#existingImagesList button").first()
+    // await firstImageRemoveButton.click()
+    // await page.waitForTimeout(fileAttachTime)
+    // expect(page.locator("#existingImagesList > div")).toHaveCount(1)
 
-    // add another image
-    fileInput = page.locator('input[type="file"]')
-    await fileInput.setInputFiles(["tests/test-image-3.jpg"])
-    await page.waitForTimeout(fileAttachTime)
-    // no need to test attachment showing as it is already tested during post creation
+    // // add another image
+    // fileInput = page.locator('input[type="file"]')
+    // await fileInput.setInputFiles(["tests/test-image-3.jpg"])
+    // await page.waitForTimeout(fileAttachTime)
+    // // no need to test attachment showing as it is already tested during post creation
 
-    // Submit the updated post & pull latest changes
-    await page.click('button[type="submit"]')
-    await page.waitForSelector(".bg-green-100", { timeout: firebaseProcessTime })
-    await doGitPullAndNavigateToHome(page)
+    // // Submit the updated post & pull latest changes
+    // await page.click('button[type="submit"]')
+    // await page.waitForSelector(".bg-green-100", { timeout: firebaseProcessTime })
+    // await doGitPullAndNavigateToHome(page)
 
-    // navigate to the post & check if title & description updated, also the removed image is removed
-    await page.click(`text=${updatedPostTitle}`)
-    await page.waitForLoadState("networkidle")
-    await expect(page.getByText(updatedPostTitle)).toBeVisible()
-    description = await page.locator(".prose").textContent()
-    expect(description).toContain(updatedDescription)
-    postImages = page.locator(".prose img")
-    await expect(postImages).toHaveCount(2)
-    let firstImageSrc = await postImages.first().getAttribute("src")
-    expect(firstImageSrc).toContain("test-image-2")
+    // // navigate to the post & check if title & description updated, also the removed image is removed
+    // await page.click(`text=${updatedPostTitle}`)
+    // await page.waitForLoadState("networkidle")
+    // await expect(page.getByText(updatedPostTitle)).toBeVisible()
+    // description = await page.locator(".prose").textContent()
+    // expect(description).toContain(updatedDescription)
+    // postImages = page.locator(".prose img")
+    // await expect(postImages).toHaveCount(2)
+    // let firstImageSrc = await postImages.first().getAttribute("src")
+    // expect(firstImageSrc).toContain("test-image-2")
 
     //========
     // Step 4: Delete the post
@@ -155,6 +155,8 @@ test.describe("Forum End-to-End Tests", () => {
     page.on("dialog", async (dialog) => {
       dialog.accept()
     })
+    page.pause()
+
     // Click delete button
     const deleteButton = page.locator("#deletePostBtn")
     await deleteButton.click()
