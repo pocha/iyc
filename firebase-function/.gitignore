@@ -67,3 +67,5 @@ node_modules/
 .env.isocnettest
 # dataconnect generated files
 .dataconnect
+
+package-lock.json

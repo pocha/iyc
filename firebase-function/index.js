@@ -2,10 +2,10 @@
 const { submitForm } = require('./submitForm');
 const { checkWorkflow } = require('./checkWorkflow');
 const { submitComment } = require('./submitComment');
-const { deletePost } = require('./deletePost');
+const { deleteContent } = require('./deleteContent');
 
 // Export all functions
 exports.checkWorkflow = checkWorkflow;
+exports.deleteContent = deleteContent;
 exports.submitForm = submitForm;
 exports.submitComment = submitComment;
-exports.deletePost = deletePost;

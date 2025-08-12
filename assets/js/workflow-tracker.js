@@ -46,22 +46,25 @@ class WorkflowTracker {
 
     // Iterate through each active submission to see if current URL is affected
     for (const [url, submission] of Object.entries(this.activeSubmissions)) {
-      const { submissionId: slug, operation } = submission
+      const { submissionId, operation } = submission //submissionId is slug for post & commentId for comment
 
       const urlParams = new URLSearchParams(window.location.search)
       const isEditPage = urlParams.get("edit") === null ? false : true
 
       if (currentUrl === url) {
-        if (operation === "new_post") this.handleNewPostPage()
-        if (operation === "edit_post") this.handleEditPage("edit")
-        if (operation === "delete_post") this.handlePostViewPage(slug, "delete")
-      } else if (currentUrl.includes(slug)) {
+        if (operation === "new_post") this.disableNewPostForm()
+        if (operation === "edit_post") this.disablePostEditForm("edit")
+        if (operation === "delete_post") this.disablePostEditDeleteButtons(submissionId, "delete")
+        if (operation === "new_comment") this.disableNewCommentFormOnPost()
+        if (operation === "edit_comment" || operation === "delete_comment")
+          this.disableCommentEditDeleteButton(submissionId)
+      } else if (currentUrl.includes(submissionId)) {
         if (isEditPage) {
           // on edit page of a post getting deleted
-          this.handleEditPage("delete")
+          this.disablePostEditForm("delete")
         } else {
           // on post view page of post getting edited
-          this.handlePostViewPage(slug, "edit")
+          this.disablePostEditDeleteButtons(submissionId, "edit")
         }
       }
     }
@@ -93,7 +96,7 @@ class WorkflowTracker {
   }
 
   // Handle new post page restrictions
-  handleNewPostPage() {
+  disableNewPostForm() {
     const postForm = document.getElementById("submissionForm")
     const submitButton = document.getElementById("submitBtn")
 
@@ -107,7 +110,7 @@ class WorkflowTracker {
   }
 
   // Handle edit page restrictions
-  handleEditPage(conflictType = "edit") {
+  disablePostEditForm(conflictType = "edit") {
     const editForm = document.getElementById("submissionForm")
     const submitButton = document.getElementById("submitBtn")
 
@@ -123,7 +126,7 @@ class WorkflowTracker {
   }
 
   // Handle post view page - grey out edit/delete links based on active operations
-  handlePostViewPage(postSlug, operationType) {
+  disablePostEditDeleteButtons(postSlug, operationType) {
     const buttons = []
     buttons.push(document.getElementById("editPostBtn"))
     buttons.push(document.getElementById("deletePostBtn"))
@@ -135,16 +138,48 @@ class WorkflowTracker {
     })
   }
 
+  // Handle comment form restrictions
+  disableNewCommentFormOnPost() {
+    const commentForm = document.getElementById("commentForm")
+    const commentSubmitButton = document.getElementById("commentSubmitBtn")
+
+    this.blockForm(
+      commentForm,
+      commentSubmitButton,
+      "Comment operation is in progress...",
+      "Submit Comment",
+      "Processing..."
+    )
+  }
+
+  // Handle edit/delete buttons for comments
+  disableCommentEditDeleteButton(commentId) {
+    const editButtons = document.querySelectorAll(
+      `[data-comment-id="${commentId}"] .edit-comment-btn, .edit-comment-btn[data-comment-id="${commentId}"]`
+    )
+    const deleteButtons = document.querySelectorAll(
+      `[data-comment-id="${commentId}"] .delete-comment-btn, .delete-comment-btn[data-comment-id="${commentId}"]`
+    )
+
+    editButtons.forEach((button) => {
+      button.disabled = true
+      button.style.opacity = "0.5"
+      button.style.cursor = "not-allowed"
+    })
+
+    deleteButtons.forEach((button) => {
+      button.disabled = true
+      button.style.opacity = "0.5"
+      button.style.cursor = "not-allowed"
+    })
+  }
+
   // Block form elements
   blockForm(form, submitButton, message, originalText, progressText) {
     if (form) {
       form.style.opacity = "0.5"
       form.style.pointerEvents = "none"
     }
-
-    const successMessageTitle = document.getElementById("successMessageTitle")
-    successMessageTitle.textContent = message
-
     if (submitButton) {
       submitButton.disabled = true
       submitButton.textContent = progressText
@@ -224,7 +259,9 @@ class WorkflowTracker {
         try {
           const workflowStatus = await this.checkWorkflowStatus(submission.commitSha)
           if (["completed", "cancelled", "timed_out"].includes(workflowStatus.status)) {
-            console.log(`Workflow for commit ${submission.commitSha} completed/timed out, removing from tracking`)
+            console.log(
+              `Workflow for commit ${submission.commitSha} status changed to ${workflowStatus.status}, removing from tracking`
+            )
 
             const clonedObject = JSON.parse(JSON.stringify(this.activeSubmissions[url]))
             submissionsRemoved.push(clonedObject)
