@@ -180,10 +180,6 @@ class WorkflowTracker {
       form.style.opacity = "0.5"
       form.style.pointerEvents = "none"
     }
-
-    const successMessageTitle = document.getElementById("successMessageTitle")
-    successMessageTitle.textContent = message
-
     if (submitButton) {
       submitButton.disabled = true
       submitButton.textContent = progressText
