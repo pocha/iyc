@@ -68,4 +68,4 @@ node_modules/
 # dataconnect generated files
 .dataconnect
 
-firebase-lock.json
+package-lock.json
