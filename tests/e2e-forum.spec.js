@@ -176,6 +176,7 @@ test.describe("Forum End-to-End Tests", () => {
     )
 
     console.log("✓ Comment edit functionality working")
+    await resetSubmissionsOnBrowser(page)
 
     //=============
     // Step 5: Delete the comment
@@ -205,6 +206,7 @@ test.describe("Forum End-to-End Tests", () => {
     expect(commentCount).toBe(0)
 
     console.log("✓ Comment delete functionality working")
+    await resetSubmissionsOnBrowser(page)
 
     //========
     // Step 6: Delete the post
@@ -268,4 +270,10 @@ async function doGitPullAndReloadPage(page) {
   await page.waitForTimeout(jekyllRebuildTime)
   await page.reload()
   await page.waitForLoadState("networkidle")
+}
+
+async function resetSubmissionsOnBrowser(page) {
+  await page.evaluate(() => {
+    localStorage.setItem("activeSubmissions", JSON.stringify({}))
+  })
 }
