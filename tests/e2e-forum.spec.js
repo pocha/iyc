@@ -146,7 +146,7 @@ test.describe("Forum End-to-End Tests", () => {
     console.log("Step 4: Deleting the post...")
     await page.goto(homeUrl)
     await page.waitForLoadState("networkidle")
-    await page.click(`text=${updatedPostTitle}`)
+    await page.click(`text=${postTitle}`)
     await page.waitForLoadState("networkidle")
 
     expect(page.locator("#deletePostBtn")).toBeVisible()
