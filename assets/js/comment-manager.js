@@ -114,7 +114,7 @@ document.getElementById("editCommentForm").addEventListener("submit", async func
       statusDiv.className = "mb-4"
 
       setTimeout(() => {
-        // closeEditFormModal()
+        closeEditFormModal()
         window.location.reload() // reloading as the edit & delete button will not be disabled by simply closing the modal
       }, 2000)
     } else {
