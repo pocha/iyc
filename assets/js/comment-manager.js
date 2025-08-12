@@ -240,9 +240,13 @@ function closeEditFormModal() {
   window.history.pushState({}, "", url)
 }
 
-document.getElementById("closeEditFormModal").addEventListener("click", closeEditFormModal)
-
-document.getElementById("cancelEditComment").addEventListener("click", closeEditFormModal)
+const buttonsForClosingEditpop = [
+  document.getElementById("closeEditCommentModal"),
+  document.getElementById("cancelEditComment"),
+]
+buttonsForClosingEditpop.forEach((button) => {
+  button.addEventListener("click", closeEditFormModal)
+})
 
 // Check URL for direct edit comment access
 function checkEditCommentFromURL() {
