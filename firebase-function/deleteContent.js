@@ -55,7 +55,7 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
 
       let filePath = null
       if (isCommentDeletion) {
-        const { commentPath } = getCommentPaths(postSlug, postDate)
+        const { commentPath } = getCommentPaths(postSlug, postDate, commentId)
         filePath = commentPath
       } else {
         const { blogFilePath } = getPostPaths(postSlug, postDate)
