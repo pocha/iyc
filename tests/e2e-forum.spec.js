@@ -97,13 +97,11 @@ test.describe("Forum End-to-End Tests", () => {
     await page.goto(homeUrl)
     await page.waitForLoadState("networkidle")
 
-    await expect(page.locator('button:has-text("Edit")')).toBeVisible()
-
     await page.click(`text=${postTitle}`)
     await page.waitForLoadState("networkidle")
-    await expect(page.locator('button:has-text("Edit")')).toBeVisible()
+    await expect(page.locator("button:#editPostBtn")).toBeVisible()
 
-    let editButton = page.locator('button:has-text("Edit")')
+    let editButton = page.locator("button:#editPostBtn")
     await editButton.click()
     await page.waitForLoadState("networkidle")
 
@@ -151,14 +149,14 @@ test.describe("Forum End-to-End Tests", () => {
     await page.click(`text=${updatedPostTitle}`)
     await page.waitForLoadState("networkidle")
 
-    expect(page.locator('button:has-text("Delete")')).toBeVisible()
+    expect(page.locator("button:#deletePostBtn")).toBeVisible()
 
     // dialog need to be registered before the delete button is clicked
     page.on("dialog", async (dialog) => {
       dialog.accept()
     })
     // Click delete button
-    const deleteButton = page.locator('button:has-text("Delete")')
+    const deleteButton = page.locator("button:#deletePostBtn")
     await deleteButton.click()
 
     await page.waitForTimeout(1000) // wait for confirm dialog to come up, the dialog registered will click ok
