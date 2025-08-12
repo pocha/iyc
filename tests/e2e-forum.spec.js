@@ -155,7 +155,9 @@ test.describe("Forum End-to-End Tests", () => {
     page.on("dialog", async (dialog) => {
       dialog.accept()
     })
-    page.pause()
+
+    //await page.pause()
+    await page.waitForTimeout(1000) // wait for confirm dialog to come up, the dialog registered will click ok
 
     // Click delete button
     const deleteButton = page.locator("#deletePostBtn")
