@@ -65,7 +65,11 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
       const parsedContent = await getContent(filePath, isCommentDeletion)
 
       if (!parsedContent) {
-        return // Error response already sent in getContent
+        res.status(404).json({
+          success: false,
+          error: isCommentDeletion ? "Comment not found." : "Post not found.",
+        })
+        return
       }
 
       if (!parsedContent.user_cookie || parsedContent.user_cookie !== userCookie) {
