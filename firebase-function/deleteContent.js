@@ -86,7 +86,7 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
 
         // Add comment file to deletion list
         filesToDelete.push({
-          path: commentPath,
+          path: filePath,
           content: null,
           encoding: null, // This marks the file for deletion
         })
@@ -132,7 +132,7 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
 
 async function getContent(path, isCommentDeletion) {
   try {
-    const contentResponse = await octokit.repos.getContent({
+    const contentResponse = await octokit.rest.repos.getContent({
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
       path: path,
@@ -160,7 +160,7 @@ async function getContent(path, isCommentDeletion) {
 
 async function addFilesFromDirectoryToDelete(path, filesToDelete) {
   try {
-    const dirResponse = await octokit.repos.getContent({
+    const dirResponse = await octokit.rest.repos.getContent({
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
       path: path,
@@ -187,7 +187,7 @@ async function addFilesFromDirectoryToDelete(path, filesToDelete) {
   }
 }
 
-async function addImageToDelete(imageUrl, postSlug, filesToDelete) {
+async function addImageToDelete(imageUrl, postSlug, postDate, filesToDelete) {
   // Check if comment has an associated image using the parsed YAML
   if (imageUrl) {
     // Extract filename from the GitHub URL
