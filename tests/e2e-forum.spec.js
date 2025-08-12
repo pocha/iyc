@@ -152,24 +152,28 @@ test.describe("Forum End-to-End Tests", () => {
     await page.waitForLoadState("networkidle")
 
     // Wait for comment to appear and find the edit button
-    const editCommentButton = page.locator(".comment-item").first().locator('button:has-text("Edit")')
+    const editCommentButton = page.locator("#commentsContainer > div").first().locator('button:has-text("Edit")')
+    expect(editCommentButton).toBeVisible()
     await editCommentButton.click()
 
     // Wait for edit form to appear
-    await page.waitForSelector(".comment-edit-form")
+    page.waitForTimeout(500)
+    expect(page.locator("#editCommentForm")).toBeVisible()
 
     // Modify the comment text
-    const editTextarea = page.locator('.comment-edit-form textarea[name="content"]')
+    const editTextarea = page.locator("#editCommentText")
     await editTextarea.fill("This is an edited test comment with image")
 
     // Submit the edit
-    const saveButton = page.locator('.comment-edit-form button:has-text("Save")')
+    const saveButton = page.locator('"#commentsContainer button:has-text("Update Comment")')
     await saveButton.click()
 
     // Wait for edit to complete and verify
     await page.waitForSelector(".text-green-600", { timeout: firebaseProcessTime })
     await doGitPullAndReloadPage(page)
-    await expect(page.locator(".comment-item").first()).toContainText("This is an edited test comment with image")
+    await expect(page.locator("#commentsContainer > div").first()).toContainText(
+      "This is an edited test comment with image"
+    )
 
     console.log("✓ Comment edit functionality working")
 
@@ -184,7 +188,7 @@ test.describe("Forum End-to-End Tests", () => {
     await page.waitForLoadState("networkidle")
 
     // Find and click delete button
-    const deleteCommentButton = page.locator(".comment-item").first().locator('button:has-text("Delete")')
+    const deleteCommentButton = page.locator("#commentsContainer > div").first().locator('button:has-text("Delete")')
     await deleteCommentButton.click()
 
     await page.waitForTimeout(1000) // wait for the dialog handler
@@ -197,7 +201,7 @@ test.describe("Forum End-to-End Tests", () => {
     await doGitPullAndReloadPage(page)
 
     // Verify comment is deleted (no comment items should exist)
-    const commentCount = await page.locator(".comment-item").count()
+    const commentCount = await page.locator("#commentsContainer > div").count()
     expect(commentCount).toBe(0)
 
     console.log("✓ Comment delete functionality working")
