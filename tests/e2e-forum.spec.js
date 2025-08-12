@@ -165,7 +165,7 @@ test.describe("Forum End-to-End Tests", () => {
     await editTextarea.fill("This is an edited test comment with image")
 
     // Submit the edit
-    const saveButton = page.locator("#commentsContainer").locator('button:has-text("Update Comment")')
+    const saveButton = page.locator("#commentsContainer").locator('button[type="submit"]')
     await saveButton.click()
 
     // Wait for edit to complete and verify
