@@ -8,7 +8,7 @@ const postDescription = "This is a test post with multiple images for end-to-end
 const updatedDescription = "This post has been updated during end-to-end testing."
 const homeUrl = "http://localhost:4001/iyc/"
 
-const jekyllRebuildTime = 7000
+const jekyllRebuildTime = 5000
 const fileAttachTime = 2000
 const firebaseProcessTime = 7000
 
@@ -41,7 +41,7 @@ test.describe("Forum End-to-End Tests", () => {
     await fileInput.setInputFiles(["tests/test-image-1.jpg", "tests/test-image-2.jpg"])
 
     // Wait for files to be uploaded and displayed
-    await page.waitForTimeout(2000)
+    await page.waitForTimeout(500)
     const fileListText = await page.locator("#uploadedFilesList").textContent()
     expect(fileListText).toContain("test-image-1.jpg")
     expect(fileListText).toContain("test-image-2.jpg")
@@ -174,6 +174,9 @@ test.describe("Forum End-to-End Tests", () => {
     await expect(page.locator("#commentsContainer > div").first()).toContainText(
       "This is an edited test comment with image"
     )
+    // check if the previous image is still visible
+    postImages = page.locator("#commentsContainer img")
+    await expect(postImages).toHaveCount(1)
 
     console.log("✓ Comment edit functionality working")
     await resetSubmissionsOnBrowser(page)
