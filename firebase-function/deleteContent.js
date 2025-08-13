@@ -10,6 +10,8 @@ const {
   createSingleCommit,
   getPostPaths,
   getCommentPaths,
+  generateOwnershipHash,
+  extractUserCookieFromRequest,
 } = require("./library")
 
 exports.deleteContent = functions.region("asia-south1").https.onRequest((req, res) => {
@@ -38,14 +40,25 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
         })
         return
       }
-
-      const { postSlug, postDate, commentId, userCookie } = req.body
-
-      // Validate required fields
-      if (!postSlug || !userCookie) {
+      // Extract user cookie from request headers with mandatory validation
+      let userCookie
+      try {
+        userCookie = extractUserCookieFromRequest(req)
+      } catch (error) {
         res.status(400).json({
           success: false,
-          error: "Post slug and user cookie are required.",
+          error: error.message,
+        })
+        return
+      }
+
+      const { postSlug, postDate, commentId } = req.body
+
+      // Validate required fields
+      if (!postSlug) {
+        res.status(400).json({
+          success: false,
+          error: "Post slug is required.",
         })
         return
       }
@@ -72,7 +85,8 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
         return
       }
 
-      if (!parsedContent.user_cookie || parsedContent.user_cookie !== userCookie) {
+      const computedHash = generateOwnershipHash(userCookie)
+      if (!parsedContent.cookie_hash || parsedContent.cookie_hash !== computedHash) {
         res.status(403).json({
           success: false,
           error: isCommentDeletion ? "You can only delete your own comments." : "You can only delete your own posts.",

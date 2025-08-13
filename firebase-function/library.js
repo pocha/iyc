@@ -4,15 +4,17 @@ const { Octokit } = require("@octokit/rest")
 const cors = require("cors")
 const busboy = require("busboy")
 const { v4: uuidv4 } = require("uuid")
+const crypto = require("crypto")
 
 // Initialize Firebase Admin SDK
 admin.initializeApp()
 
 // GitHub configuration
-const GITHUB_TOKEN = functions.config().github?.token || process.env.GITHUB_TOKEN
-const GITHUB_OWNER = functions.config().github?.owner || process.env.GITHUB_OWNER
-const GITHUB_REPO = functions.config().github?.repo || process.env.GITHUB_REPO
-const GITHUB_BRANCH = functions.config().github?.branch || process.env.GITHUB_BRANCH || "main"
+// GitHub configuration
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN
+const GITHUB_OWNER = process.env.GITHUB_OWNER
+const GITHUB_REPO = process.env.GITHUB_REPO
+const GITHUB_BRANCH = process.env.GITHUB_BRANCH || "master"
 
 // Initialize Octokit
 const octokit = new Octokit({
@@ -70,6 +72,29 @@ function getCommentPaths(slug, date, commentId = null, imageFileName = null) /* 
   }
 }
 
+
+// Function to get existing comment content
+async function getCommentContent(commentPath) {
+  try {
+    const response = await octokit.rest.repos.getContent({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      path: commentPath,
+      ref: GITHUB_BRANCH,
+    })
+
+    if (response.data.content) {
+      const content = Buffer.from(response.data.content, 'base64').toString('utf-8')
+      return content
+    }
+    return null
+  } catch (error) {
+    if (error.status === 404) {
+      return null // Comment doesn't exist yet
+    }
+    throw error
+  }
+}
 // Shared function to parse multipart form data using Busboy
 const parseMultipartData = (req, options = {}) => {
   return new Promise((resolve, reject) => {
@@ -175,6 +200,30 @@ const getOrCreateUserCookie = (existingCookie) => {
   return existingCookie && existingCookie.trim() !== "" ? existingCookie : generateUserCookie()
 }
 
+
+// Helper function to extract user cookie from request headers with mandatory validation
+const extractUserCookieFromRequest = (req) => {
+  // Extract user cookie from request headers
+  let userCookie =
+    req.headers["x-user-cookie"] ||
+    req.headers["cookie"]?.match(/forum_user_id=([^;]+)/)?.[1] ||
+    null
+
+  // Mandatory cookie check - fail fast if not found
+  if (!userCookie || userCookie.trim() === "") {
+    throw new Error("User cookie is required but not found in request headers")
+  }
+
+  return userCookie.trim()
+}
+
+
+// Helper function to generate ownership hash
+const generateOwnershipHash = (userCookie) => {
+  const siteSecret = process.env.SITE_SECRET
+  const message = userCookie + siteSecret
+  return crypto.createHash('sha256').update(message).digest('hex').substring(0, 16)
+}
 // Generic function to create a single commit with multiple files
 async function createSingleCommit(files, commitMessage) {
   try {
@@ -299,7 +348,7 @@ title: "${title}"
 date: ${postDate}
 author: Anonymous
 slug: ${slug}
-user_cookie: ${userCookie}
+cookie_hash: ${generateOwnershipHash(userCookie)}
 ---
 
 ${description}
@@ -366,10 +415,11 @@ async function editPost(slug, date, title, description, files, deletedFiles, use
       existingContent = Buffer.from(existingFile.content, "base64").toString("utf-8")
 
       // Check if the user cookie matches the one in the existing post
-      const cookieMatch = existingContent.match(/user_cookie:\s*(.+)/)
-      const existingCookie = cookieMatch ? cookieMatch[1].trim() : null
+      const cookieMatch = existingContent.match(/cookie_hash:\s*(.+)/)
+      const storedHash = cookieMatch ? cookieMatch[1].trim() : null
+      const computedHash = generateOwnershipHash(userCookie)
 
-      if (existingCookie !== userCookie) {
+      if (storedHash !== computedHash) {
         throw new Error("Unauthorized: You can only edit posts you created")
       }
     } catch (error) {
@@ -386,7 +436,7 @@ title: "${title}"
 date: ${date}
 author: Anonymous
 slug: ${slug}
-user_cookie: ${userCookie}
+cookie_hash: ${generateOwnershipHash(userCookie)}
 ---
 
 ${description}
@@ -485,8 +535,11 @@ module.exports = {
   createSingleCommit,
   generateUserCookie,
   getOrCreateUserCookie,
+  extractUserCookieFromRequest,
   createNewPost,
   editPost,
   getPostPaths,
   getCommentPaths,
+  getCommentContent,
+  generateOwnershipHash,
 }

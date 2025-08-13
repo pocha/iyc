@@ -87,7 +87,7 @@ layout: default
 				<span class="text-xs text-gray-400">{{ comment.date | date: "%B %d, %Y at %I:%M %p" }}</span>
 				<div class="flex items-center space-x-2">
 					<!-- Comment Owner Actions -->
-					<div class="comment-owner-actions" style="display: none" data-user-cookie="{{ comment.user_cookie }}">
+<div class="comment-owner-actions" style="display: none" data-cookie-hash="{{ comment.cookie_hash }}">
 					<button
 						class="edit-comment-btn bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-all"
 						data-comment-id="{{ comment_id }}" data-post-date="{{ page.date | date: "%Y-%m-%d" }}"
@@ -222,12 +222,18 @@ layout: default
   }
 
   // Check if current user is post owner
-  function revealEditDeleteButtonIfRequired() {
-    const userCookie = getCookie()
-    const postOwnerCookie = '{{ page.user_cookie | default: "" }}'
-
-    if (postOwnerCookie && userCookie === postOwnerCookie) {
-      document.getElementById("postOwnerActions").style.display = "block"
+  async function revealEditDeleteButtonIfRequired() {
+    const postOwnerCookieHash = '{{ page.cookie_hash | default: "" }}'
+    
+    if (postOwnerCookieHash) {
+      const userCookie = getCookie()
+      if (userCookie) {
+        const userHash = await generateOwnershipHash(userCookie)
+        
+        if (userHash === postOwnerCookieHash) {
+          document.getElementById("postOwnerActions").style.display = "block"
+        }
+      }
     }
   }
 
@@ -267,11 +273,11 @@ layout: default
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "x-user-cookie": getCookie(),
           },
           body: JSON.stringify({
             postSlug: postSlug,
             postDate: postDate,
-            userCookie: getCookie()
           }),
         })
           .then((response) => response.json())
@@ -303,9 +309,13 @@ layout: default
           })
       }
     })
+    // Reveal edit/delete buttons for post owner
+    // Reveal edit/delete buttons for post owner
+    revealEditDeleteButtonIfRequired()
+    // Reveal edit/delete buttons for comment owners
+    revealCommentActionsIfRequired()
   })
 
-  revealEditDeleteButtonIfRequired()
 
   window.postSlug = "{{ page.slug }}"
 </script>
