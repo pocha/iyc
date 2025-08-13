@@ -273,6 +273,7 @@ layout: default
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "x-user-cookie": getCookie('userCookie'),
           },
           body: JSON.stringify({
             postSlug: postSlug,

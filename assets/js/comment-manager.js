@@ -6,6 +6,9 @@ async function submitCommentForm(formData, imageElementId, operation) {
 
   const response = await fetch(`${window.firebaseUrl}/submitComment`, {
     method: "POST",
+    headers: {
+      "x-user-cookie": getCookie('userCookie'),
+    },
     body: formData,
   })
 
@@ -45,8 +48,8 @@ document.getElementById("commentForm").addEventListener("submit", async function
 
   const formData = new FormData(e.target)
 
-  // User cookie will be extracted from headers by backend
-  const userCookie = getOrSetUserCookie() // Still needed to ensure cookie exists
+  // Ensure user has a cookie (create if first time)
+  getOrSetUserCookie()
 
   try {
     const result = await submitCommentForm(formData, "image", "new_comment")
@@ -99,8 +102,6 @@ document.getElementById("editCommentForm").addEventListener("submit", async func
 
   const formData = new FormData(e.target)
 
-  // User cookie will be extracted from headers by backend
-  const userCookie = getCookie() // Still needed to ensure cookie exists
 
   try {
     const data = await submitCommentForm(formData, "editCommentImage", "edit_comment")
@@ -174,6 +175,7 @@ function handleDeleteComment(commentId, postDate) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "x-user-cookie": getCookie('userCookie'),
     },
     body: JSON.stringify({
       postSlug: window.postSlug,
