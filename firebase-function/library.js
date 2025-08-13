@@ -498,4 +498,5 @@ module.exports = {
   editPost,
   getPostPaths,
   getCommentPaths,
+  generateOwnershipHash,
 }
