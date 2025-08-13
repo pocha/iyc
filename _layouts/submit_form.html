@@ -344,18 +344,7 @@ layout: default
     errorMessage.classList.add("hidden")
 
     try {
-      // Handle cookie based on operation type
-      const slug = document.getElementById("slug").value
-      let userCookie
-      
-      if (slug) {
-        // Edit operation - user already has cookie, just get it
-        userCookie = getCookie('userCookie')
-      } else {
-        // New post operation - ensure user has cookie
-        getOrSetUserCookie()
-        userCookie = getCookie('userCookie')
-      }
+      const userCookie = getOrSetUserCookie()
 
       // Prepare form data
       const formData = new FormData()
