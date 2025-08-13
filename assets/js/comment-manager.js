@@ -7,7 +7,7 @@ async function submitCommentForm(formData, imageElementId, operation) {
   const response = await fetch(`${window.firebaseUrl}/submitComment`, {
     method: "POST",
     headers: {
-      "x-user-cookie": getCookie('userCookie'),
+      "x-user-cookie": getCookie(),
     },
     body: formData,
   })
@@ -175,7 +175,7 @@ function handleDeleteComment(commentId, postDate) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-user-cookie": getCookie('userCookie'),
+      "x-user-cookie": getCookie(),
     },
     body: JSON.stringify({
       postSlug: window.postSlug,
