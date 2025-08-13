@@ -66,11 +66,11 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
       const { commentPath } = getCommentPaths(postSlug, postDate, commentId)
 
       // Generate hash for ownership verification
-      const ownershipHash = generateOwnershipHash(userCookie)
+      const cookieHash = generateOwnershipHash(userCookie)
       
       // Create comment content in YAML format for Staticman structure
       let commentContent = `date: ${timestamp}
-user_cookie: ${ownershipHash}
+cookie_hash: ${cookieHash}
 message: ${comment}`
       // Prepare files for single commit
       const filesToCreate = []
