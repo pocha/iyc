@@ -22,6 +22,25 @@ function generateUserCookie() {
 }
 
 // Initialize and get user cookie (main function used across the forum)
+
+// Hash function for secure ownership verification
+async function generateOwnershipHash(userCookie) {
+  const siteSecret = window.siteSecret
+  const message = userCookie + siteSecret
+  const msgBuffer = new TextEncoder().encode(message)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  return hashHex.substring(0, 16) // Use first 16 chars for shorter hash
+}
+
+// Verify ownership using hash comparison
+async function verifyOwnership(storedHash) {
+  const userCookie = getOrSetUserCookie()
+  const computedHash = await generateOwnershipHash(userCookie)
+  return computedHash === storedHash
+}
+
 function getOrSetUserCookie() {
   let userCookie = getCookie()
   if (!userCookie) {

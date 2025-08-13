@@ -9,6 +9,7 @@ const {
   parseMultipartData,
   createSingleCommit,
   getCommentPaths,
+  generateOwnershipHash,
 } = require("./library")
 
 exports.submitComment = functions.region("asia-south1").https.onRequest((req, res) => {
@@ -64,11 +65,13 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
       const isEditMode = commentId && commentId.trim() !== ""
       const { commentPath } = getCommentPaths(postSlug, postDate, commentId)
 
+      // Generate hash for ownership verification
+      const ownershipHash = generateOwnershipHash(userCookie)
+      
       // Create comment content in YAML format for Staticman structure
       let commentContent = `date: ${timestamp}
-user_cookie: ${userCookie}
+user_cookie: ${ownershipHash}
 message: ${comment}`
-
       // Prepare files for single commit
       const filesToCreate = []
 

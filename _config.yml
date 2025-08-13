@@ -6,6 +6,7 @@ github_user: 'pocha'
 github_repo: 'iyc'
 github_branch: 'master'
 firebase_url: 'https://asia-south1-isocnet-2d37f.cloudfunctions.net'
+site_secret: 'forum_secret_key_2025_secure_hash_verification'
 
 markdown: kramdown
 highlighter: rouge

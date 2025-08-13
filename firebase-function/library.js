@@ -4,6 +4,7 @@ const { Octokit } = require("@octokit/rest")
 const cors = require("cors")
 const busboy = require("busboy")
 const { v4: uuidv4 } = require("uuid")
+const crypto = require("crypto")
 
 // Initialize Firebase Admin SDK
 admin.initializeApp()
@@ -175,6 +176,13 @@ const getOrCreateUserCookie = (existingCookie) => {
   return existingCookie && existingCookie.trim() !== "" ? existingCookie : generateUserCookie()
 }
 
+
+// Helper function to generate ownership hash
+const generateOwnershipHash = (userCookie) => {
+  const siteSecret = 'forum_secret_key_2025_secure_hash_verification'
+  const message = userCookie + siteSecret
+  return crypto.createHash('sha256').update(message).digest('hex').substring(0, 16)
+}
 // Generic function to create a single commit with multiple files
 async function createSingleCommit(files, commitMessage) {
   try {
@@ -299,7 +307,7 @@ title: "${title}"
 date: ${postDate}
 author: Anonymous
 slug: ${slug}
-user_cookie: ${userCookie}
+user_cookie: ${generateOwnershipHash(userCookie)}
 ---
 
 ${description}
@@ -367,9 +375,10 @@ async function editPost(slug, date, title, description, files, deletedFiles, use
 
       // Check if the user cookie matches the one in the existing post
       const cookieMatch = existingContent.match(/user_cookie:\s*(.+)/)
-      const existingCookie = cookieMatch ? cookieMatch[1].trim() : null
+      const storedHash = cookieMatch ? cookieMatch[1].trim() : null
+      const computedHash = generateOwnershipHash(userCookie)
 
-      if (existingCookie !== userCookie) {
+      if (storedHash !== computedHash) {
         throw new Error("Unauthorized: You can only edit posts you created")
       }
     } catch (error) {
@@ -386,7 +395,7 @@ title: "${title}"
 date: ${date}
 author: Anonymous
 slug: ${slug}
-user_cookie: ${userCookie}
+user_cookie: ${generateOwnershipHash(userCookie)}
 ---
 
 ${description}

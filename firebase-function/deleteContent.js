@@ -10,6 +10,7 @@ const {
   createSingleCommit,
   getPostPaths,
   getCommentPaths,
+  generateOwnershipHash,
 } = require("./library")
 
 exports.deleteContent = functions.region("asia-south1").https.onRequest((req, res) => {
@@ -72,7 +73,8 @@ exports.deleteContent = functions.region("asia-south1").https.onRequest((req, re
         return
       }
 
-      if (!parsedContent.user_cookie || parsedContent.user_cookie !== userCookie) {
+      const computedHash = generateOwnershipHash(userCookie)
+      if (!parsedContent.user_cookie || parsedContent.user_cookie !== computedHash) {
         res.status(403).json({
           success: false,
           error: isCommentDeletion ? "You can only delete your own comments." : "You can only delete your own posts.",
