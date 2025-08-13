@@ -78,7 +78,7 @@ async function revealCommentActionsIfRequired() {
   const commentActions = document.querySelectorAll(".comment-owner-actions")
 
   for (const action of commentActions) {
-    const commentCookieHash = action.getAttribute("data-user-cookie")
+    const commentCookieHash = action.getAttribute("data-cookie-hash")
     if (commentCookieHash && (await verifyOwnership(commentCookieHash))) {
       action.style.display = "block"
     }
