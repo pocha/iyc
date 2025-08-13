@@ -71,17 +71,18 @@ document.getElementById("commentForm").addEventListener("submit", async function
 })
 
 // Comment ownership and edit/delete functionality
-function revealCommentActionsIfRequired() {
+async function revealCommentActionsIfRequired() {
   const userCookie = getCookie()
   if (!userCookie) return
 
   const commentActions = document.querySelectorAll(".comment-owner-actions")
-  commentActions.forEach((action) => {
-    const commentUserCookie = action.getAttribute("data-user-cookie")
-    if (commentUserCookie === userCookie) {
+  
+  for (const action of commentActions) {
+    const storedHash = action.getAttribute("data-user-cookie")
+    if (storedHash && await verifyOwnership(storedHash)) {
       action.style.display = "block"
     }
-  })
+  }
 }
 
 document.getElementById("editCommentForm").addEventListener("submit", async function (e) {
@@ -311,9 +312,9 @@ function applyCommentWorkflowBlocking() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", async function () {
   // Initialize comment functionality
-  revealCommentActionsIfRequired()
+  await revealCommentActionsIfRequired()
   checkEditCommentFromURL()
   applyCommentWorkflowBlocking()
 
