@@ -81,12 +81,12 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
 
       // Generate hash for ownership verification
       const cookieHash = generateOwnershipHash(userCookie)
-      
+
       // Create comment content in YAML format for Staticman structure
       let commentContent = `date: ${timestamp}
 cookie_hash: ${cookieHash}
 message: ${comment}`
-      
+
       // In edit mode, preserve existing image if no new image is uploaded
       let existingImageUrl = null
       if (isEditMode) {
@@ -131,15 +131,6 @@ image: ${imageUrl}`
         // Preserve existing image in edit mode when no new image is uploaded
         commentContent += `
 image: ${existingImageUrl}`
-      }
-
-          // Add image file to the commit
-          filesToCreate.push({
-            path: commentImagePath,
-            content: buffer.toString("base64"),
-            encoding: "base64",
-          })
-        }
       }
 
       // Add comment file to the commit
