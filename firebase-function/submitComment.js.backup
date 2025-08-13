@@ -9,7 +9,6 @@ const {
   parseMultipartData,
   createSingleCommit,
   getCommentPaths,
-  getCommentContent,
   generateOwnershipHash,
   extractUserCookieFromRequest,
 } = require("./library")
@@ -86,28 +85,10 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
       let commentContent = `date: ${timestamp}
 cookie_hash: ${cookieHash}
 message: ${comment}`
-      
-      // In edit mode, preserve existing image if no new image is uploaded
-      let existingImageUrl = null
-      if (isEditMode) {
-        try {
-          const existingContent = await getCommentContent(commentPath)
-          if (existingContent) {
-            // Extract existing image URL using regex
-            const imageMatch = existingContent.match(/^image:\s*(.+)$/m)
-            if (imageMatch) {
-              existingImageUrl = imageMatch[1].trim()
-            }
-          }
-        } catch (error) {
-          console.error("Error retrieving existing comment content:", error)
-          // Continue without existing image if retrieval fails
-        }
-      }
       // Prepare files for single commit
       const filesToCreate = []
 
-      // Handle image attachment if present or preserve existing image
+      // Handle image attachment if present
       if (files && files.length > 0) {
         const file = files[0] // Get first file for comments
         const { filename, mimeType, buffer } = file
@@ -119,19 +100,6 @@ message: ${comment}`
           const imageUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${commentImagePath}?raw=true`
           commentContent += `
 image: ${imageUrl}`
-
-          // Add image file to the commit
-          filesToCreate.push({
-            path: commentImagePath,
-            content: buffer.toString("base64"),
-            encoding: "base64",
-          })
-        }
-      } else if (isEditMode && existingImageUrl) {
-        // Preserve existing image in edit mode when no new image is uploaded
-        commentContent += `
-image: ${existingImageUrl}`
-      }
 
           // Add image file to the commit
           filesToCreate.push({

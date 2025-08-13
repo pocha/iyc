@@ -72,6 +72,29 @@ function getCommentPaths(slug, date, commentId = null, imageFileName = null) /* 
   }
 }
 
+
+// Function to get existing comment content
+async function getCommentContent(commentPath) {
+  try {
+    const response = await octokit.rest.repos.getContent({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      path: commentPath,
+      ref: GITHUB_BRANCH,
+    })
+
+    if (response.data.content) {
+      const content = Buffer.from(response.data.content, 'base64').toString('utf-8')
+      return content
+    }
+    return null
+  } catch (error) {
+    if (error.status === 404) {
+      return null // Comment doesn't exist yet
+    }
+    throw error
+  }
+}
 // Shared function to parse multipart form data using Busboy
 const parseMultipartData = (req, options = {}) => {
   return new Promise((resolve, reject) => {
@@ -517,5 +540,6 @@ module.exports = {
   editPost,
   getPostPaths,
   getCommentPaths,
+  getCommentContent,
   generateOwnershipHash,
 }
