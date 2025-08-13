@@ -223,15 +223,14 @@ layout: default
 
   // Check if current user is post owner
   async function revealEditDeleteButtonIfRequired() {
-    const postOwnerCookie = '{{ page.cookie_hash | default: "" }}'
+    const postOwnerCookieHash = '{{ page.cookie_hash | default: "" }}'
     
-    if (postOwnerCookie) {
+    if (postOwnerCookieHash) {
       const userCookie = getCookie()
       if (userCookie) {
         const userHash = await generateOwnershipHash(userCookie)
-        const postOwnerHash = postOwnerCookie
         
-        if (userHash === postOwnerHash) {
+        if (userHash === postOwnerCookieHash) {
           document.getElementById("postOwnerActions").style.display = "block"
         }
       }
