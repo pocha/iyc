@@ -10,6 +10,7 @@ const {
   createNewPost,
   editPost,
   getOrCreateUserCookie,
+  extractUserCookieFromRequest,
 } = require("./library")
 
 exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) => {
@@ -49,14 +50,19 @@ exports.submitForm = functions.region("asia-south1").https.onRequest((req, res) 
       // Extract form data
       const { title, description, slug, date, deletedFiles } = fields
 
-      // Extract user cookie from request headers or fields
-      let userCookie =
-        req.headers["x-user-cookie"] ||
-        req.headers["cookie"]?.match(/forum_user_id=([^;]+)/)?.[1] ||
-        fields.userCookie ||
-        null
+      // Extract user cookie from request headers with mandatory validation
+      let userCookie
+      try {
+        userCookie = extractUserCookieFromRequest(req)
+      } catch (error) {
+        res.status(400).json({
+          success: false,
+          error: error.message,
+        })
+        return
+      }
 
-      // Generate user cookie if not present
+      // Generate user cookie if extraction succeeds but cookie is empty (fallback)
       userCookie = getOrCreateUserCookie(userCookie)
 
       // Validate required fields

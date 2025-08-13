@@ -177,6 +177,19 @@ const getOrCreateUserCookie = (existingCookie) => {
   return existingCookie && existingCookie.trim() !== "" ? existingCookie : generateUserCookie()
 }
 
+// Helper function to extract user cookie from request headers with mandatory validation
+const extractUserCookieFromRequest = (req) => {
+  // Extract user cookie from request headers
+  let userCookie = req.headers["x-user-cookie"] || req.headers["cookie"]?.match(/forum_user_id=([^;]+)/)?.[1] || null
+
+  // Mandatory cookie check - fail fast if not found
+  if (!userCookie || userCookie.trim() === "") {
+    throw new Error("User cookie is required but not found in request headers")
+  }
+
+  return userCookie.trim()
+}
+
 // Helper function to generate ownership hash
 const generateOwnershipHash = (userCookie) => {
   const siteSecret = process.env.SITE_SECRET
@@ -307,7 +320,7 @@ title: "${title}"
 date: ${postDate}
 author: Anonymous
 slug: ${slug}
-user_cookie: ${generateOwnershipHash(userCookie)}
+cookie_hash: ${generateOwnershipHash(userCookie)}
 ---
 
 ${description}
@@ -374,7 +387,7 @@ async function editPost(slug, date, title, description, files, deletedFiles, use
       existingContent = Buffer.from(existingFile.content, "base64").toString("utf-8")
 
       // Check if the user cookie matches the one in the existing post
-      const cookieMatch = existingContent.match(/user_cookie:\s*(.+)/)
+      const cookieMatch = existingContent.match(/cookie_hash:\s*(.+)/)
       const storedHash = cookieMatch ? cookieMatch[1].trim() : null
       const computedHash = generateOwnershipHash(userCookie)
 
@@ -395,7 +408,7 @@ title: "${title}"
 date: ${date}
 author: Anonymous
 slug: ${slug}
-user_cookie: ${generateOwnershipHash(userCookie)}
+cookie_hash: ${generateOwnershipHash(userCookie)}
 ---
 
 ${description}
@@ -494,6 +507,7 @@ module.exports = {
   createSingleCommit,
   generateUserCookie,
   getOrCreateUserCookie,
+  extractUserCookieFromRequest,
   createNewPost,
   editPost,
   getPostPaths,
