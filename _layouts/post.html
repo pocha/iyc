@@ -222,12 +222,19 @@ layout: default
   }
 
   // Check if current user is post owner
-  function revealEditDeleteButtonIfRequired() {
-    const userCookie = getCookie()
+  async function revealEditDeleteButtonIfRequired() {
     const postOwnerCookie = '{{ page.user_cookie | default: "" }}'
-
-    if (postOwnerCookie && userCookie === postOwnerCookie) {
-      document.getElementById("postOwnerActions").style.display = "block"
+    
+    if (postOwnerCookie) {
+      const userCookie = getCookie()
+      if (userCookie) {
+        const userHash = await generateOwnershipHash(userCookie)
+        const postOwnerHash = await generateOwnershipHash(postOwnerCookie)
+        
+        if (userHash === postOwnerHash) {
+          document.getElementById("postOwnerActions").style.display = "block"
+        }
+      }
     }
   }
 
