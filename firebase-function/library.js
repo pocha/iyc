@@ -14,7 +14,7 @@ admin.initializeApp()
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN
 const GITHUB_OWNER = process.env.GITHUB_OWNER
 const GITHUB_REPO = process.env.GITHUB_REPO
-const GITHUB_BRANCH = process.env.GITHUB_BRANCH || "main"
+const GITHUB_BRANCH = process.env.GITHUB_BRANCH || "master"
 
 // Initialize Octokit
 const octokit = new Octokit({
