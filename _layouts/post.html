@@ -309,9 +309,10 @@ layout: default
           })
       }
     })
+    // Reveal edit/delete buttons for post owner
+    revealEditDeleteButtonIfRequired()
   })
 
-  revealEditDeleteButtonIfRequired()
 
   window.postSlug = "{{ page.slug }}"
 </script>
