@@ -10,10 +10,11 @@ const crypto = require("crypto")
 admin.initializeApp()
 
 // GitHub configuration
-const GITHUB_TOKEN = functions.config().github?.token || process.env.GITHUB_TOKEN
-const GITHUB_OWNER = functions.config().github?.owner || process.env.GITHUB_OWNER
-const GITHUB_REPO = functions.config().github?.repo || process.env.GITHUB_REPO
-const GITHUB_BRANCH = functions.config().github?.branch || process.env.GITHUB_BRANCH || "main"
+// GitHub configuration
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN
+const GITHUB_OWNER = process.env.GITHUB_OWNER
+const GITHUB_REPO = process.env.GITHUB_REPO
+const GITHUB_BRANCH = process.env.GITHUB_BRANCH || "main"
 
 // Initialize Octokit
 const octokit = new Octokit({
@@ -179,7 +180,7 @@ const getOrCreateUserCookie = (existingCookie) => {
 
 // Helper function to generate ownership hash
 const generateOwnershipHash = (userCookie) => {
-  const siteSecret = 'forum_secret_key_2025_secure_hash_verification'
+  const siteSecret = process.env.SITE_SECRET
   const message = userCookie + siteSecret
   return crypto.createHash('sha256').update(message).digest('hex').substring(0, 16)
 }
