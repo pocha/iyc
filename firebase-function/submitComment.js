@@ -10,6 +10,7 @@ const {
   createSingleCommit,
   getCommentPaths,
   generateOwnershipHash,
+  extractUserCookieFromRequest,
 } = require("./library")
 
 exports.submitComment = functions.region("asia-south1").https.onRequest((req, res) => {
@@ -46,13 +47,25 @@ exports.submitComment = functions.region("asia-south1").https.onRequest((req, re
         imageOnly: true,
       })
 
-      const { postSlug, postDate, comment, commentId, userCookie } = fields
+      const { postSlug, postDate, comment, commentId } = fields
 
-      // Validate required fields
-      if (!postSlug || !comment || !userCookie) {
+      // Extract user cookie from request headers with mandatory validation
+      let userCookie
+      try {
+        userCookie = extractUserCookieFromRequest(req)
+      } catch (error) {
         res.status(400).json({
           success: false,
-          error: "Post slug, comment, and user cookie are required fields.",
+          error: error.message,
+        })
+        return
+      }
+
+      // Validate required fields
+      if (!postSlug || !comment) {
+        res.status(400).json({
+          success: false,
+          error: "Post slug and comment are required fields.",
         })
         return
       }

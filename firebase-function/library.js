@@ -178,6 +178,23 @@ const getOrCreateUserCookie = (existingCookie) => {
 }
 
 
+// Helper function to extract user cookie from request headers with mandatory validation
+const extractUserCookieFromRequest = (req) => {
+  // Extract user cookie from request headers
+  let userCookie =
+    req.headers["x-user-cookie"] ||
+    req.headers["cookie"]?.match(/forum_user_id=([^;]+)/)?.[1] ||
+    null
+
+  // Mandatory cookie check - fail fast if not found
+  if (!userCookie || userCookie.trim() === "") {
+    throw new Error("User cookie is required but not found in request headers")
+  }
+
+  return userCookie.trim()
+}
+
+
 // Helper function to generate ownership hash
 const generateOwnershipHash = (userCookie) => {
   const siteSecret = process.env.SITE_SECRET
@@ -495,6 +512,7 @@ module.exports = {
   createSingleCommit,
   generateUserCookie,
   getOrCreateUserCookie,
+  extractUserCookieFromRequest,
   createNewPost,
   editPost,
   getPostPaths,

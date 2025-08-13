@@ -45,9 +45,8 @@ document.getElementById("commentForm").addEventListener("submit", async function
 
   const formData = new FormData(e.target)
 
-  // Add user cookie (create one if user doesn't have one)
-  const userCookie = getOrSetUserCookie()
-  formData.append("userCookie", userCookie)
+  // User cookie will be extracted from headers by backend
+  const userCookie = getOrSetUserCookie() // Still needed to ensure cookie exists
 
   try {
     const result = await submitCommentForm(formData, "image", "new_comment")
@@ -100,11 +99,8 @@ document.getElementById("editCommentForm").addEventListener("submit", async func
 
   const formData = new FormData(e.target)
 
-  // Add user cookie
-  const userCookie = getCookie()
-  if (userCookie) {
-    formData.append("userCookie", userCookie)
-  }
+  // User cookie will be extracted from headers by backend
+  const userCookie = getCookie() // Still needed to ensure cookie exists
 
   try {
     const data = await submitCommentForm(formData, "editCommentImage", "edit_comment")
@@ -183,7 +179,6 @@ function handleDeleteComment(commentId, postDate) {
       postSlug: window.postSlug,
       postDate: postDate,
       commentId: commentId,
-      userCookie: getCookie(),
     }),
   })
     .then((response) => response.json())
