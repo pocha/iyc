@@ -102,7 +102,6 @@ document.getElementById("editCommentForm").addEventListener("submit", async func
 
   const formData = new FormData(e.target)
 
-
   try {
     const data = await submitCommentForm(formData, "editCommentImage", "edit_comment")
 
@@ -272,7 +271,7 @@ function applyCommentWorkflowBlocking() {
   const userCookie = getCookie()
   if (!userCookie) return
 
-  const activeSubmissions = window.workflowTracker.getActiveSubmissions()
+  const activeSubmissions = window.workflowTracker.loadActiveSubmissions()
   const hasActiveSubmissions = activeSubmissions.length > 0
 
   if (hasActiveSubmissions) {
