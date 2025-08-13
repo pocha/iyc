@@ -229,7 +229,7 @@ layout: default
       const userCookie = getCookie()
       if (userCookie) {
         const userHash = await generateOwnershipHash(userCookie)
-        const postOwnerHash = await generateOwnershipHash(postOwnerCookie)
+        const postOwnerHash = postOwnerCookie
         
         if (userHash === postOwnerHash) {
           document.getElementById("postOwnerActions").style.display = "block"
