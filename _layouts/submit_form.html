@@ -33,13 +33,13 @@ layout: default
       <!-- Description Field -->
       <div class="group">
         <label for="description" class="block text-gray-400 text-lg font-medium mb-2"> 📝 Description </label>
-        <textarea
+        <div
           id="description"
           name="description"
           required
           rows="6"
-          class="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:bg-white transition-all duration-300 text-lg resize-none"
-        ></textarea>
+          class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:bg-white transition-all duration-300 text-lg resize-none"
+        ></div>
 
         <!-- Existing Images Container (for edit mode) -->
         <div id="existingImagesContainer" class="mt-4 hidden">
@@ -122,6 +122,7 @@ layout: default
 </div>
 
 <script src="{{ '/assets/js/cookie-manager.js' | relative_url }}"></script>
+<script src="https://www.unpkg.com/wysimark-standalone/dist/javascript/index.cjs.js"></script>
 
 <script>
   // Firebase Function URL - Replace with your actual Firebase function URL
@@ -135,11 +136,14 @@ layout: default
   const uploadedFilesList = document.getElementById("uploadedFilesList")
   const existingImagesContainer = document.getElementById("existingImagesContainer")
   const existingImagesList = document.getElementById("existingImagesList")
+  const wysimarkContainer = document.getElementById("description")
 
   let attachedFiles = []
   let existingImages = []
   let deletedFiles = []
   let fullPostSlug = ""
+  let wysimark = null
+  wysimark = createWysimark(wysimarkContainer, { minHeight: "400px" })
 
   // Click to upload
   fileUploadArea.addEventListener("click", () => {
@@ -221,7 +225,8 @@ layout: default
       }
 
       // Set description as the content (without image references)
-      document.getElementById("description").value = content.trim()
+      // document.getElementById("description").innerHTML = content.trim()
+      wysimark.setMarkdown(content.trim())
     }
   }
 
@@ -234,12 +239,12 @@ layout: default
         const imageElement = document.createElement("div")
         imageElement.className = "relative inline-block bg-gray-100 rounded-lg p-2 border"
         imageElement.innerHTML = `
-          <img src="${image.url}" alt="${image.alt}" class="w-20 h-20 object-cover rounded">
-          <button type="button" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition-colors" onclick="removeExistingImage(${index})">
-            ×
-          </button>
-          <p class="text-xs text-gray-600 mt-1 truncate w-20">${image.filename}</p>
-        `
+           <img src="${image.url}" alt="${image.alt}" class="w-20 h-20 object-cover rounded">
+           <button type="button" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition-colors" onclick="removeExistingImage(${index})">
+             ×
+           </button>
+           <p class="text-xs text-gray-600 mt-1 truncate w-20">${image.filename}</p>
+         `
         existingImagesList.appendChild(imageElement)
       })
     }
@@ -283,17 +288,17 @@ layout: default
         const fileElement = document.createElement("div")
         fileElement.className = "flex items-center justify-between bg-gray-50 p-3 rounded-lg border"
         fileElement.innerHTML = `
-          <div class="flex items-center">
-            <span class="text-2xl mr-3">📄</span>
-            <div>
-              <p class="font-medium text-gray-800">${file.name}</p>
-              <p class="text-sm text-gray-500">${(file.size / 1024).toFixed(1)} KB</p>
-            </div>
-          </div>
-          <button type="button" class="text-red-500 hover:text-red-700 font-bold text-xl" onclick="removeSelectedFile(${index})">
-            ×
-          </button>
-        `
+           <div class="flex items-center">
+             <span class="text-2xl mr-3">📄</span>
+             <div>
+               <p class="font-medium text-gray-800">${file.name}</p>
+               <p class="text-sm text-gray-500">${(file.size / 1024).toFixed(1)} KB</p>
+             </div>
+           </div>
+           <button type="button" class="text-red-500 hover:text-red-700 font-bold text-xl" onclick="removeSelectedFile(${index})">
+             ×
+           </button>
+         `
         uploadedFilesList.appendChild(fileElement)
       })
     } else {
@@ -349,7 +354,8 @@ layout: default
       // Prepare form data
       const formData = new FormData()
       formData.append("title", document.getElementById("title").value)
-      formData.append("description", document.getElementById("description").value)
+      //formData.append("description", document.getElementById("description").innerHTML)
+      formData.append("description", wysimark.getMarkdown())
 
       // Add multiple files
       attachedFiles.forEach((file, index) => {
