@@ -23,7 +23,7 @@ const octokit = new Octokit({
 
 // CORS configuration
 const corsHandler = cors({
-  origin: ["http://20.42.15.153:4001", "https://pocha.github.io"],
+  origin: ["http://20.42.15.153:4001", "https://pocha.github.io", "http://localhost:4001"],
   methods: ["GET", "POST", "OPTIONS"],
 })
 
@@ -72,7 +72,6 @@ function getCommentPaths(slug, date, commentId = null, imageFileName = null) /* 
   }
 }
 
-
 // Function to get existing comment content
 async function getCommentContent(commentPath) {
   try {
@@ -84,7 +83,7 @@ async function getCommentContent(commentPath) {
     })
 
     if (response.data.content) {
-      const content = Buffer.from(response.data.content, 'base64').toString('utf-8')
+      const content = Buffer.from(response.data.content, "base64").toString("utf-8")
       return content
     }
     return null
@@ -200,14 +199,10 @@ const getOrCreateUserCookie = (existingCookie) => {
   return existingCookie && existingCookie.trim() !== "" ? existingCookie : generateUserCookie()
 }
 
-
 // Helper function to extract user cookie from request headers with mandatory validation
 const extractUserCookieFromRequest = (req) => {
   // Extract user cookie from request headers
-  let userCookie =
-    req.headers["x-user-cookie"] ||
-    req.headers["cookie"]?.match(/forum_user_id=([^;]+)/)?.[1] ||
-    null
+  let userCookie = req.headers["x-user-cookie"] || req.headers["cookie"]?.match(/forum_user_id=([^;]+)/)?.[1] || null
 
   // Mandatory cookie check - fail fast if not found
   if (!userCookie || userCookie.trim() === "") {
@@ -217,12 +212,11 @@ const extractUserCookieFromRequest = (req) => {
   return userCookie.trim()
 }
 
-
 // Helper function to generate ownership hash
 const generateOwnershipHash = (userCookie) => {
   const siteSecret = process.env.SITE_SECRET
   const message = userCookie + siteSecret
-  return crypto.createHash('sha256').update(message).digest('hex').substring(0, 16)
+  return crypto.createHash("sha256").update(message).digest("hex").substring(0, 16)
 }
 // Generic function to create a single commit with multiple files
 async function createSingleCommit(files, commitMessage) {
