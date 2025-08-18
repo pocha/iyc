@@ -3,9 +3,9 @@ description: 'Community of Ishaites to share information, giveaway items and ask
 baseurl: '/iyc'
 url: ''
 github_user: 'pocha'
+github_branch: 'test'
+firebase_url: 'https://asia-south1-isocnettest.cloudfunctions.net'
 github_repo: 'iyc'
-github_branch: 'master'
-firebase_url: 'https://asia-south1-isocnet-2d37f.cloudfunctions.net'
 site_secret: 'forum_secret_key_2025_secure_hash_verification'
 
 markdown: kramdown
@@ -45,3 +45,5 @@ exclude:
   - '_posts/**/*.svg'
   - '_posts/**/*.ico'
   - '_posts/**/*.webp'
+  - 'test-results'
+  - 'playwright-report'
